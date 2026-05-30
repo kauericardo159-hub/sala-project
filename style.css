@@ -1,57 +1,59 @@
 /* ==========================================================================
-   1. CONFIGURAÇÕES GERAIS (VARIÁVEIS E RESETS)
+   VARIÁVEIS DE ESTILO (PADRÃO DISCORD DARK PRO)
    ========================================================================== */
 :root {
-    --bg-principal: #313338;     /* Cor de fundo do Discord */
-    --bg-cards: #2b2d31;         /* Cor dos painéis e cards internos */
-    --bg-inputs: #1e1f22;        /* Cor escura dos campos de texto e listas */
-    --bg-inputs-foco: #383a40;   /* Destaque ao clicar nos inputs */
-    --blurple: #5865f2;          /* O roxo oficial do Discord */
-    --blurple-hover: #4752c4;    
+    --fundo-app: #1e1f22;
+    --fundo-paineis: #2b2d31;
+    --fundo-cards: #313338;
+    --fundo-inputs: #1e1f22;
+    --blurple: #5865f2;
+    --blurple-hover: #4752c4;
     --verde-sucesso: #248046;
     --verde-hover: #1a6535;
-    --vermelho-sair: #da373c;
+    --vermelho-cancelar: #da373c;
     --vermelho-hover: #a92b2f;
-    --texto-claro: #f2f3f5;
-    --texto-mutado: #949ba4;
-    --texto-labels: #b5bac1;
+    --texto-principal: #f2f3f5;
+    --texto-secundario: #949ba4;
+    --borda-fina: rgba(255, 255, 255, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    background-color: var(--bg-principal);
-    color: var(--texto-claro);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
+    background-color: var(--fundo-app);
+    color: var(--texto-principal);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    box-sizing: border-box;
 }
 
-/* Container que envolve todo o app */
 #app-container {
     width: 100%;
+    max-width: 1200px;
+    padding: 15px;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
-    box-sizing: border-box;
 }
 
 /* ==========================================================================
-   2. ESTILIZAÇÃO DO LOBBY (TELA DE SALAS)
+   ESTILOS DA INTERFACE DO LOBBY (TELA DE SALAS)
    ========================================================================== */
 .container {
-    background: var(--bg-cards);
+    background-color: var(--fundo-paineis);
+    width: 100%;
+    max-width: 450px;
     padding: 30px;
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    width: 100%;
-    max-width: 480px;
-    box-sizing: border-box;
-    animation: fadeIn 0.3s ease-in-out;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--borda-fina);
+    animation: suavizarEntrada 0.3s ease-out;
 }
 
 .lobby-header {
@@ -60,71 +62,73 @@ body {
 }
 
 .lobby-header h1 {
-    margin: 0;
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 800;
-    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #fff, var(--texto-secundario));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .lobby-header p {
-    color: var(--texto-mutated);
-    font-size: 14px;
-    margin: 8px 0 0 0;
+    font-size: 13px;
+    color: var(--texto-secundario);
 }
 
 .card-secao {
-    background: var(--bg-inputs);
-    padding: 20px;
+    background-color: var(--fundo-cards);
+    padding: 18px;
     border-radius: 8px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    margin-bottom: 16px;
+    border: 1px solid var(--borda-fina);
 }
 
 .card-secao h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 16px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     color: #fff;
+    margin-bottom: 12px;
 }
 
 .card-secao label {
     display: block;
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--texto-labels);
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    margin-bottom: 10px;
-    letter-spacing: 0.5px;
+    color: var(--texto-secundario);
+    margin-bottom: 8px;
 }
 
-/* Inputs, Selects e Botões Padrão */
+/* Formulários Avançados */
 input[type="text"],
 input[type="password"],
 select {
     width: 100%;
     padding: 12px;
-    margin-bottom: 12px;
-    border-radius: 5px;
-    border: none;
-    background-color: var(--bg-inputs-foco);
-    color: var(--texto-claro);
-    font-size: 15px;
+    background-color: var(--fundo-inputs);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--texto-principal);
+    font-size: 14px;
     outline: none;
-    box-sizing: border-box;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
 }
 
-input:focus, select:focus {
-    background-color: #404249;
+input[type="text"]:focus,
+input[type="password"]:focus,
+select:focus {
+    border-color: var(--blurple);
+    background-color: #111214;
 }
 
 .btn-principal {
     background-color: var(--blurple);
-    color: white;
+    color: #fff;
     border: none;
     padding: 14px;
-    border-radius: 5px;
-    font-size: 15px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     width: 100%;
@@ -134,35 +138,35 @@ input:focus, select:focus {
 .btn-principal:hover { background-color: var(--blurple-hover); }
 .btn-principal:active { transform: scale(0.98); }
 
-/* Lista de salas ativas no Lobby */
+/* Itens da Lista de Canais */
 #lista-de-salas {
-    max-height: 180px;
+    max-height: 200px;
     overflow-y: auto;
-    padding-right: 5px;
 }
 
 .sala-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--bg-cards);
-    padding: 12px 16px;
+    background-color: var(--fundo-inputs);
+    padding: 12px 14px;
     border-radius: 6px;
-    margin-bottom: 10px;
-    border-left: 4px solid var(--blurple);
+    margin-bottom: 8px;
+    border-left: 3px solid var(--blurple);
 }
 
-.sala-item strong {
-    font-size: 15px;
+.sala-item span {
+    font-size: 14px;
     color: #fff;
 }
 
 .btn-entrar-sala {
     background-color: var(--verde-sucesso);
-    color: white;
+    color: #fff;
     border: none;
-    padding: 8px 16px;
+    padding: 6px 14px;
     border-radius: 4px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -171,67 +175,67 @@ input:focus, select:focus {
 .btn-entrar-sala:hover { background-color: var(--verde-hover); }
 
 .txt-vazio {
-    color: var(--texto-mutado);
+    color: var(--texto-secundario);
+    font-size: 13px;
     text-align: center;
-    font-size: 14px;
-    margin: 15px 0;
     font-style: italic;
+    padding: 10px 0;
 }
 
-
 /* ==========================================================================
-   3. ESTILIZAÇÃO DO CHAT E CALL (DIVISÃO ESTILO DISCORD)
+   ESTILOS DA TELA INTERNA DO CHAT E CALL (GRID COMPLETO)
    ========================================================================== */
 .container-chat {
     display: flex;
     width: 95vw;
-    height: 90vh;
-    max-width: 1200px;
-    background: var(--bg-cards);
+    height: 85vh;
+    background-color: var(--fundo-paineis);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-    animation: fadeIn 0.4s ease-in-out;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--borda-fina);
+    animation: suavizarEntrada 0.4s ease-out;
 }
 
-/* Painel Esquerdo - Grade de Vídeo (Call) */
+/* Área de Call / Vídeos (Esquerda) */
 .painel-call {
     width: 45%;
-    background: #111214; /* Fundo super escuro para focar no vídeo */
+    background-color: #111214;
     padding: 20px;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.call-header {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .call-header h2 {
-    margin: 0 0 15px 0;
-    font-size: 20px;
+    font-size: 18px;
     color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 700;
 }
 
 .video-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
     overflow-y: auto;
     flex-grow: 1;
     align-content: start;
-    padding-right: 5px;
 }
 
 video {
     width: 100%;
     aspect-ratio: 16/10;
-    background: #2b2d31;
-    border-radius: 8px;
+    background-color: #232428;
+    border-radius: 6px;
     object-fit: cover;
-    transform: scaleX(-1); /* Espelha a câmera local automaticamente */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    transform: scaleX(-1); /* Espelha o fluxo de vídeo para parecer natural */
+    border: 2px solid rgba(255, 255, 255, 0.05);
 }
 
 .call-actions {
@@ -239,12 +243,12 @@ video {
 }
 
 .btn-sair {
-    background-color: var(--vermelho-sair);
-    color: white;
+    background-color: var(--vermelho-cancelar);
+    color: #fff;
     border: none;
     padding: 12px;
-    border-radius: 5px;
-    font-weight: bold;
+    border-radius: 6px;
+    font-weight: 700;
     cursor: pointer;
     width: 100%;
     transition: background-color 0.2s;
@@ -252,12 +256,12 @@ video {
 
 .btn-sair:hover { background-color: var(--vermelho-hover); }
 
-/* Painel Direito - Chat de Texto */
+/* Área do Chat de Mensagens (Direita) */
 .painel-texto {
     width: 55%;
     display: flex;
     flex-direction: column;
-    background: var(--bg-principal);
+    background-color: var(--fundo-cards);
 }
 
 .chat-area {
@@ -266,102 +270,75 @@ video {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
-/* Blocos de mensagens de texto */
 .mensagem-bloco {
-    background: rgba(255, 255, 255, 0.02);
+    background-color: rgba(0, 0, 0, 0.15);
     padding: 10px 14px;
     border-radius: 6px;
-    word-wrap: break-word;
     border-left: 3px solid var(--blurple);
-    animation: surgimentoMensagem 0.15s ease-out;
+    word-break: break-word;
+    animation: deslizarMensagem 0.2s ease-out;
 }
 
 .mensagem-bloco .autor {
     font-weight: 700;
-    color: #00aff4; /* Azul destacado para nicks */
-    margin-right: 8px;
-    font-size: 14px;
+    color: #00aff4;
+    font-size: 13px;
+    margin-right: 6px;
 }
 
 .mensagem-bloco .texto {
+    font-size: 13.5px;
     color: #dbdee1;
-    font-size: 14px;
-    vertical-align: middle;
 }
 
-/* Área inferior de input do chat */
 .input-area {
     padding: 20px;
-    background: var(--bg-principal);
+    background-color: var(--fundo-cards);
 }
 
 .input-area input {
-    background-color: var(--bg-inputs-foco);
-    border-radius: 8px;
-    padding: 16px;
-    margin: 0;
-    font-size: 14px;
+    background-color: var(--fundo-inputs);
+    padding: 15px;
+    border-radius: 6px;
     border: none;
+    margin: 0;
 }
-
 
 /* ==========================================================================
-   4. ANIMAÇÕES E RESPONSIVIDADE (MOBILE-FRIENDLY)
+   ANIMAÇÕES E RESPONSIVIDADE EM DISPOSITIVOS MÓVEIS (MOBILE)
    ========================================================================== */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes suavizarEntrada {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes surgimentoMensagem {
-    from { opacity: 0; transform: translateX(-5px); }
+@keyframes deslizarMensagem {
+    from { opacity: 0; transform: translateX(-4px); }
     to { opacity: 1; transform: translateX(0); }
 }
 
-/* Scrollbar personalizada para ficar discreta estilo Discord */
-::-webkit-scrollbar {
-    width: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: #1a1b1e;
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #111214;
-}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #111214; border-radius: 10px; }
 
-/* Responsividade Completa para Celulares (como no Acode) */
 @media (max-width: 768px) {
     .container-chat {
         flex-direction: column;
-        height: 95vh;
-        width: 100vw;
+        height: 90vh;
     }
-    
     .painel-call {
         width: 100%;
-        height: 40%;
-        box-sizing: border-box;
-        border-right: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        height: 38%;
+        border-bottom: 2px solid var(--fundo-app);
     }
-    
     .painel-texto {
         width: 100%;
-        height: 60%;
+        height: 62%;
     }
-
     .video-grid {
-        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    }
-
-    video {
-        aspect-ratio: 4/3;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     }
 }
