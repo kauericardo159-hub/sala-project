@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z-Hub | Início</title>
+    <title>Z-Hub | Chat & Call</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <main id="app-viewport" style="display: none;">
         <div id="layout-barra-lateral"></div>
+        
         <div id="layout-user-explorer"></div>
     </main>
 
     <div id="z-core-loader" class="loader-wrapper">
         <div class="spinner"></div>
-        <p>Sincronizando com o multiverso...</p>
+        <p>Conectando ao canal...</p>
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -24,7 +25,7 @@
         const urlServidor = "https://sala-project.onrender.com";
         const socket = io(urlServidor, { transports: ['websocket', 'polling'] });
 
-        // Trava de Segurança: Se não existir sessão ativa, manda o usuário direto pro login.html
+        // Trava de Segurança: Se não existir sessão ativa, chuta pro login
         const sessaoAtiva = localStorage.getItem('zhub_session_data');
         if (!sessaoAtiva) {
             window.location.href = "login.html";
@@ -33,7 +34,7 @@
         socket.on('connect', () => {
             try {
                 const dados = JSON.parse(sessaoAtiva);
-                // Autentica silenciosamente para liberar o carregamento do index
+                // Autentica silenciosamente para liberar o carregamento seguro da página
                 socket.emit('login-usuario', { username: dados.username, senha: dados.senha });
             } catch(e) {
                 localStorage.removeItem('zhub_session_data');
@@ -41,24 +42,21 @@
             }
         });
 
-        socket.on('login-sucesso', (dados) => {
-            console.log(`🟢 Sessão validada para @${dados.username}. Liberando Viewport.`);
-            
-            // Remove o loader da tela
+        socket.on('login-sucesso', () => {
+            // Remove o loader e exibe o Viewport de forma limpa
             document.getElementById('z-core-loader').style.display = 'none';
-            
-            // Ajustado para 'flex' para alinhar perfeitamente com as regras CSS do barra.js
             document.getElementById('app-viewport').style.display = 'flex';
         });
 
         socket.on('erro', () => {
-            // Se as credenciais salvas no navegador falharem, limpa o cache e expulsa pro login
             localStorage.removeItem('zhub_session_data');
             window.location.href = "login.html";
         });
     </script>
 
     <script src="barra.js"></script>
-      <script src="user-explorer.js"></script>
+    <script src="save-conta.js"></script>
+    <script src="listchat.js"></script>
+    <script src="chat.js"></script>
 </body>
 </html>

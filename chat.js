@@ -1,230 +1,321 @@
-// Variáveis globais de gerenciamento da Call e Chat (P2P e Sockets)
-let meuStreamAudio = null;
-let meuPeer = null;
-let apelidoUsuario = "";
-let canalAtual = "";
-const chamadasAtivas = {};
-
 /**
- * Inicializa a estrutura interna do Chat e da Call de Áudio
- * @param {string} nomeSala - Nome do canal autorizado pelo servidor
- * @param {string} apelido - @user original do usuário logado
+ * Componente 'Chat' - Estilo Project Z
+ * Controla a interface interna da conversa, envio de mensagens e sincronização local.
  */
-async function inicializarPainelChatCall(nomeSala, apelido) {
-    canalAtual = nomeSala;
-    apelidoUsuario = apelido;
+(function() {
+    // 1. CONFIGURAÇÕES E SESSÃO
+    const sessao = JSON.parse(localStorage.getItem('zhub_session_data') || '{}');
+    const meuUsuario = sessao.username || 'Visitante';
+    const alvoAtivo = localStorage.getItem('zhub_chat_alvo_ativo'); // Usuário com quem vou conversar
 
-    // Efetua a transição visual ocultando o lobby e abrindo a sala
-    document.getElementById('tela-salas').style.display = 'none';
-    document.getElementById('tela-chat').style.display = 'flex';
-    document.getElementById('nome-sala-titulo').innerText = `🔊 Canal: #${canalAtual}`;
-
-    // Limpa e prepara o container de usuários da chamada
-    const painelUsuarios = document.getElementById('painel-usuarios-call');
-    if (painelUsuarios) {
-        painelUsuarios.innerHTML = "";
+    // Se não houver um alvo ativo, exibe tela de seleção e interrompe
+    if (!alvoAtivo) {
+        renderizarTelaSemChat();
+        return;
     }
 
-    // Configura o evento do teclado para a caixa de mensagens de texto
-    configurarInputMensagem();
+    // Identificador único da sala privada (ordem alfabética para garantir que ambos entrem na mesma sala)
+    const salaId = [meuUsuario.toLowerCase(), alvoAtivo.toLowerCase()].sort().join('_room_');
 
-    // 1. CAPTURA APENAS O MICROFONE (Sem Câmera = Conexão Ultra Rápida)
-    try {
-        meuStreamAudio = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-        // Adiciona você mesmo no topo da lista de membros da chamada
-        adicionarUsuarioNaListaCall("voce_local", `${apelidoUsuario} (Você)`, true);
-    } catch (erro) {
-        console.warn("Aviso: Microfone indisponível ou bloqueado. Entrando no modo ouvinte.", erro);
-        adicionarLogSistema("Você entrou no modo ouvinte (Microfone desativado/bloqueado).");
-        adicionarUsuarioNaListaCall("voce_local", `${apelidoUsuario} (Ouvinte)`, false);
+    // Helpers de Avatar
+    function obterAvatar(username) {
+        const avatarTipo = localStorage.getItem(`avatar_@${username.toLowerCase()}`) || 'avatar1';
+        if (avatarTipo.startsWith('data:image')) return avatarTipo;
+        
+        let seed = "Felix";
+        if (avatarTipo === 'avatar2') seed = "Aneka";
+        if (avatarTipo === 'avatar3') seed = "Jack";
+        if (avatarTipo === 'avatar4') seed = "Midnight";
+        return `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
     }
 
-    // 2. CONFIGURA O MOTOR PEERJS (Conexões de Áudio Diretas P2P)
-    const extrairHost = urlServidor.replace("https://", "").replace("http://", "").split(":")[0];
-    const usandoGitHubPages = window.location.hostname.includes("github.io");
+    // 2. INJEÇÃO DOS ESTILOS CSS (Estilo Project Z)
+    const estiloCss = document.createElement('style');
+    estiloCss.textContent = `
+        .chat-window-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 160px); /* Ajuste perfeito para caber entre a topbar e footer */
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: var(--z-black-pure);
+        }
 
-    meuPeer = new Peer(undefined, {
-        host: usandoGitHubPages ? extrairHost : '/',
-        port: usandoGitHubPages ? '443' : window.location.port || '3000',
-        secure: window.location.protocol === 'https:' || usandoGitHubPages
-    });
+        /* Cabeçalho Interno do Chat */
+        .chat-window-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: var(--z-gray-panel);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 16px 16px 0 0;
+        }
 
-    // Quando o canal PeerJS abrir com sucesso, conecta no Socket da sala
-    meuPeer.on('open', (idAudioP2P) => {
-        socket.emit('join-room', canalAtual, idAudioP2P);
-    });
+        .btn-voltar-list {
+            background: transparent;
+            border: none;
+            color: var(--z-orange-neon);
+            font-size: 18px;
+            cursor: pointer;
+            margin-right: 12px;
+            font-weight: 900;
+        }
 
-    // 3. ATENDE CHAMADAS DE ÁUDIO CHEGANDO DE OUTROS USUÁRIOS
-    meuPeer.on('call', (chamada) => {
-        // Responde enviando o nosso fluxo de áudio (se houver microfone ativo)
-        chamada.answer(meuStreamAudio);
-        
-        const elementoAudioRemoto = document.createElement('audio');
-        
-        chamada.on('stream', (streamAudioMembro) => {
-            reproduzirAudioMembro(elementoAudioRemoto, streamAudioMembro);
-            adicionarUsuarioNaListaCall(chamada.peer, `@user_remoto_${chamada.peer.slice(0,4)}`);
+        .chat-header-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 2px solid var(--z-orange-neon);
+            margin-right: 12px;
+            object-fit: cover;
+        }
+
+        .chat-header-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header-name {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--z-text-white);
+        }
+
+        .chat-header-status {
+            font-size: 11px;
+            color: #23a55a;
+            font-weight: 600;
+        }
+
+        /* Área de Mensagens (Scrollable) */
+        .chat-messages-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: #0e1012;
+        }
+
+        /* Balões de Mensagem */
+        .msg-bubble-wrapper {
+            display: flex;
+            width: 100%;
+        }
+
+        .msg-bubble-wrapper.me {
+            justify-content: flex-end;
+        }
+
+        .msg-bubble-wrapper.outro {
+            justify-content: flex-start;
+        }
+
+        .msg-bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14.5px;
+            font-weight: 500;
+            line-height: 1.4;
+            word-break: break-word;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .msg-bubble-wrapper.me .msg-bubble {
+            background-color: var(--z-orange-neon);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-bubble-wrapper.outro .msg-bubble {
+            background-color: var(--z-gray-input);
+            color: var(--z-text-white);
+            border-bottom-left-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        /* Barra de Input Inferior */
+        .chat-input-bar {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: var(--z-gray-panel);
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 0 0 16px 16px;
+            gap: 10px;
+        }
+
+        .chat-input-field {
+            flex-grow: 1;
+            background-color: var(--z-gray-input);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px 16px;
+            border-radius: 24px;
+            color: var(--z-text-white);
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input-field:focus {
+            border-color: rgba(255, 94, 0, 0.4);
+        }
+
+        .btn-send-message {
+            background-color: var(--z-orange-neon);
+            color: #ffffff;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(255, 94, 0, 0.2);
+        }
+
+        .btn-send-message:hover {
+            background-color: var(--z-orange-hover);
+        }
+
+        .btn-send-message:active {
+            transform: scale(0.95);
+        }
+
+        /* Estado Vazio Individual */
+        .no-chat-selected {
+            text-align: center;
+            padding: 40px 20px;
+            max-width: 400px;
+            margin: 80px auto;
+            background-color: var(--z-gray-panel);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+        .btn-call-action {
+            background-color: var(--z-gray-input);
+            color: var(--z-orange-neon);
+            border: 1px solid rgba(255, 94, 0, 0.2);
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+    `;
+    document.head.appendChild(estiloCss);
+
+    // 3. INJETA A ESTRUTURA DO CHAT ATIVO
+    const containerAlvo = document.getElementById('layout-user-explorer');
+    if (containerAlvo) {
+        containerAlvo.innerHTML = `
+            <div class="chat-window-container">
+                <div class="chat-window-header">
+                    <button class="btn-voltar-list" onclick="fecharChatEVoltar()">‹</button>
+                    <img src="${obterAvatar(alvoAtivo)}" class="chat-header-avatar" alt="Avatar">
+                    <div class="chat-header-info">
+                        <span class="chat-header-name">@${alvoAtivo}</span>
+                        <span class="chat-header-status">● Online</span>
+                    </div>
+                </div>
+
+                <div id="z-mensagens-chat-box" class="chat-messages-area">
+                    </div>
+
+                <div class="chat-input-bar">
+                    <input type="text" id="z-input-mensagem-campo" class="chat-input-field" placeholder="Digite uma mensagem..." autocomplete="off">
+                    <button class="btn-send-message" onclick="dispararMensagemPrivada()">➔</button>
+                </div>
+            </div>
+        `;
+
+        // Ativa o envio ao apertar a tecla "Enter"
+        document.getElementById('z-input-mensagem-campo').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') dispararMensagemPrivada();
         });
+    }
 
-        chamada.on('close', () => {
-            elementoAudioRemoto.remove();
-            removerUsuarioDaListaCall(chamada.peer);
+    // 4. LOGICA DE COMUNICAÇÃO (SOCKET IO)
+    if (window.socket) {
+        // Conecta o usuário na sala privada exclusiva desse par de amigos
+        window.socket.emit('join-room', salaId, sessao.id || 'p2p_user');
+
+        // Escuta novas mensagens vindas do servidor nesta sala
+        window.socket.on('create-message', (msg, autor) => {
+            adicionarBalaoNaTela(msg, autor);
+            
+            // Força a gravação no histórico do banco local (save-conta.js)
+            if (typeof window.gravarHistoricoNoBancoLocal === "function") {
+                window.gravarHistoricoNoBancoLocal(meuUsuario, alvoAtivo, msg, autor);
+            }
         });
-    });
+    }
 
-    // 4. ESCUTA NOVOS MEMBROS CONECTANDO NA SALA (Sinalização via Socket.io)
-    socket.on('user-connected', (idNovoUsuarioP2P) => {
-        adicionarLogSistema("Alguém se juntou ao canal de voz.");
+    /**
+     * Envia o texto digitado para o servidor
+     */
+    window.dispararMensagemPrivada = function() {
+        const input = document.getElementById('z-input-mensagem-campo');
+        const texto = input.value.trim();
+        if (!texto || !window.socket) return;
+
+        // Dispara o evento padrão já configurado no seu server.js
+        window.socket.emit('send-message', texto, meuUsuario);
+        input.value = '';
+    };
+
+    /**
+     * Adiciona o balão estilizado visualmente na tela
+     */
+    window.adicionarBalaoNaTela = function(msg, autor) {
+        const box = document.getElementById('z-mensagens-chat-box');
+        if (!box) return;
+
+        const souEu = autor.toLowerCase() === meuUsuario.toLowerCase();
+        const classeDono = souEu ? 'me' : 'outro';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `msg-bubble-wrapper ${classeDono}`;
+        wrapper.innerHTML = `<div class="msg-bubble">${msg}</div>`;
         
-        if (meuStreamAudio) {
-            // Dispara uma ligação P2P direta para o microfone do novo usuário
-            const chamada = meuPeer.call(idNovoUsuarioP2P, meuStreamAudio);
-            const elementoAudioRemoto = document.createElement('audio');
-            
-            chamada.on('stream', (streamAudioMembro) => {
-                reproduzirAudioMembro(elementoAudioRemoto, streamAudioMembro);
-                adicionarUsuarioNaListaCall(idNovoUsuarioP2P, `@user_remoto_${idNovoUsuarioP2P.slice(0,4)}`);
-            });
+        box.appendChild(wrapper);
+        
+        // Auto-scroll para manter a última mensagem sempre visível
+        box.scrollTop = box.scrollHeight;
+    };
 
-            chamada.on('close', () => {
-                elementoAudioRemoto.remove();
-                removerUsuarioDaListaCall(idNovoUsuarioP2P);
-            });
-
-            // Armazena a referência para poder desligar se ele sair
-            chamadasAtivas[idNovoUsuarioP2P] = llamada;
+    /**
+     * Limpa o ponteiro e volta para a listagem
+     */
+    window.fecharChatEVoltar = function() {
+        localStorage.removeItem('zhub_chat_alvo_ativo');
+        // Recarrega o componente injetando a lista limpa
+        if (typeof window.carregarHistoricoConversas === "function") {
+            window.location.reload();
         }
-    });
+    };
 
-    // ESCUTA QUANDO ALGUÉM CAI OU FECHA O APP
-    socket.on('user-disconnected', (idUsuarioSairP2P) => {
-        if (chamadasAtivas[idUsuarioSairP2P]) {
-            chamadasAtivas[idUsuarioSairP2P].close();
-            delete chamadasAtivas[idUsuarioSairP2P];
+    /**
+     * Tela padrão caso nenhum chat esteja selecionado
+     */
+    function renderizarTelaSemChat() {
+        const boxAlvo = document.getElementById('layout-user-explorer');
+        if (boxAlvo) {
+            boxAlvo.innerHTML = `
+                <div class="no-chat-selected">
+                    <p style="font-size: 32px;">💬</p>
+                    <h3 style="color: #fff; margin-top: 10px; font-size: 16px;">Nenhuma conversa aberta</h3>
+                    <p style="color: var(--z-text-gray); font-size: 13px; margin-top: 6px;">Escolha um dos seus chats recentes na lista ou procure amigos ativos.</p>
+                    <button class="btn-call-action" onclick="window.navegarZHub('index.html')">Procurar Amigos</button>
+                </div>
+            `;
         }
-        removerUsuarioDaListaCall(idUsuarioSairP2P);
-    });
-}
-
-/**
- * Vincula o input do chat limpando instâncias antigas para otimizar a memória
- */
-function configurarInputMensagem() {
-    const input = document.getElementById('txt-mensagem');
-    if (!input) return;
-
-    const novoInput = input.cloneNode(true);
-    input.parentNode.replaceChild(novoInput, input);
-
-    novoInput.addEventListener('keydown', (evento) => {
-        if (evento.key === 'Enter') {
-            const mensagem = evento.target.value.trim();
-            
-            if (!mensagem) return; // Barra envios de texto em branco ou spam de espaço
-            
-            // Dispara o texto para a validação central do servidor Node.js
-            socket.emit('send-message', mensagem, apelidoUsuario);
-            evento.target.value = ""; // Reseta o campo instantaneamente
-        }
-    });
-}
-
-// Escuta a homologação das mensagens e renderiza na janela
-socket.on('create-message', (msg, autor) => {
-    const areaMensagens = document.getElementById('chat-mensagens');
-    if (!areaMensagens) return;
-
-    const bloco = document.createElement('div');
-    bloco.className = "mensagem-bloco";
-    
-    // Altera dinamicamente o tom do nome para destacar o seu próprio texto
-    const corNome = (autor === apelidoUsuario) ? "#5865f2" : "#00aff4";
-
-    bloco.innerHTML = `
-        <span class="autor" style="color: ${corNome};">${autor}:</span>
-        <span class="texto">${msg}</span>
-    `;
-
-    areaMensagens.appendChild(bloco);
-    
-    // Arrasta a barra de rolagem de forma automática e suave para a última linha
-    areaMensagens.scrollTo({ top: areaMensagens.scrollHeight, behavior: 'smooth' });
-});
-
-/**
- * Cria a linha visual do usuário dentro da lista da Call (Substitutos dos blocos de vídeo)
- */
-function adicionarUsuarioNaListaCall(idCard, nomeExibicao, eOMeuPerfil = false) {
-    const listaContainer = document.getElementById('painel-usuarios-call');
-    if (!listaContainer || document.getElementById(`card-call-${idCard}`)) return;
-
-    const card = document.createElement('div');
-    card.id = `card-call-${idCard}`;
-    card.style.cssText = `
-        display: flex;
-        align-items: center;
-        background-color: #232428;
-        padding: 10px 14px;
-        border-radius: 4px;
-        border: 1px solid rgba(255,255,255,0.05);
-        margin-bottom: 6px;
-        animation: deslizarMensagem 0.2s ease-out;
-    `;
-
-    card.innerHTML = `
-        <div style="width: 32px; height: 32px; background-color: #5865f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; color: white; margin-right: 12px;">
-            ${nomeExibicao.charAt(0).toUpperCase()}
-        </div>
-        <div style="flex-grow: 1;">
-            <span style="font-size: 14px; font-weight: 600; color: #fff; display: block;">${nomeExibicao}</span>
-            <span style="font-size: 11px; color: #248046; display: block;">${eOMeuPerfil ? '🎙️ Seu Microfone Ativo' : '🔊 Ouvindo Voz'}</span>
-        </div>
-    `;
-
-    listaContainer.appendChild(card);
-}
-
-/**
- * Remove o card visual de quem saiu da chamada de voz
- */
-function removerUsuarioDaListaCall(idCard) {
-    const card = document.getElementById(`card-call-${idCard}`);
-    if (card) card.remove();
-}
-
-/**
- * Executa a reprodução física dos fluxos de áudio distribuídos via P2P
- */
-function reproduzirAudioMembro(elementoAudio, stream) {
-    elementoAudio.srcObject = stream;
-    elementoAudio.addEventListener('loadedmetadata', () => {
-        elementoAudio.play().catch(e => console.error("Erro ao reproduzir voz de canal remoto:", e));
-    });
-    document.body.appendChild(elementoAudio); // Mantém o fluxo anexado de forma oculta na janela
-}
-
-/**
- * Injeta alertas cinzas do sistema na timeline do chat de texto
- */
-function adicionarLogSistema(texto) {
-    const area = document.getElementById('chat-mensagens');
-    if (!area) return;
-    const log = document.createElement('div');
-    log.style.cssText = "color: #949ba4; font-size: 12px; font-style: italic; margin: 4px 0;";
-    log.innerText = `⚙️ ${texto}`;
-    area.appendChild(log);
-    area.scrollTop = area.scrollHeight;
-}
-
-/**
- * Desconecta todos os canais de hardware e socket, reiniciando o app para o estado limpo do lobby
- */
-function sairDaSala() {
-    if (meuStreamAudio) {
-        meuStreamAudio.getTracks().forEach(track => track.stop()); // Desliga fisicamente o microfone do aparelho
     }
-    if (meuPeer) {
-        meuPeer.destroy(); // Fecha todas as conexões diretas P2P
-    }
-    window.location.reload(); // Recarrega a página de forma limpa voltando para o lobby de login estável
-}
+
+})();

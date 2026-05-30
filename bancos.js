@@ -11,23 +11,32 @@ const arquivoUsuarios = path.join(__dirname, 'usuarios.json');
  */
 function inicializarBanco(arquivo) {
     if (!fs.existsSync(arquivo)) {
-        fs.writeFileSync(arquivo, JSON.stringify({}), 'utf-8');
+        try {
+            fs.writeFileSync(arquivo, JSON.stringify({}, null, 2), 'utf-8');
+        } catch (erro) {
+            console.error(`🔴 Erro crítico ao criar o arquivo físico de banco: ${arquivo}`, erro);
+        }
     }
 }
 
+// Inicializa os arquivos uma única vez ao rodar o servidor, poupando processamento de I/O
+inicializarBanco(arquivoUsuarios);
+inicializarBanco(arquivoSalas);
+
 const BancoDeDados = {
     // ==========================================================================
-    // SEÇÃO DE GERENCIAMENTO DE USUÁRIOS (SALVAMENTO PERMANENTE)
+    // SEÇÃO DE GERENCIAMENTO DE USUÁRIOS
     // ==========================================================================
     
     /**
      * Retorna todas as contas registradas no sistema
      */
     obterTodosUsuarios: () => {
-        inicializarBanco(arquivoUsuarios);
         try { 
-            return JSON.parse(fs.readFileSync(arquivoUsuarios, 'utf-8')); 
+            const conteudo = fs.readFileSync(arquivoUsuarios, 'utf-8');
+            return JSON.parse(conteudo) || {}; 
         } catch (e) { 
+            console.warn("⚠️ Falha na leitura de usuarios.json, redefinindo cache local.");
             return {}; 
         }
     },
@@ -35,18 +44,25 @@ const BancoDeDados = {
     /**
      * Registra ou atualiza um usuário permanentemente no arquivo usuarios.json
      */
-    salvarUsuario: (username, dadosUsuario) => {
-        inicializarBanco(arquivoUsuarios);
+    salvarUsuario: (userTratado, dadosUsuario) => {
         const usuarios = BancoDeDados.obterTodosUsuarios();
         
-        // Salva indexado pela versão em minúsculo para garantir exclusividade de login
-        usuarios[username.toLowerCase()] = {
-            id: dadosUsuario.id,
-            username: username, // Mantém a grafia original com maiúsculas/minúsculas para exibição
-            senha: dadosUsuario.senha
+        // Mantém as propriedades antigas (como senha) caso seja apenas uma atualização parcial de avatar/ID
+        const usuarioExistente = usuarios[userTratado] || {};
+
+        // Sincronia total de chaves com o padrão do server.js e suporte a avatares (String ou Base64)
+        usuarios[userTratado] = {
+            id: dadosUsuario.id || usuarioExistente.id,
+            username: dadosUsuario.username || usuarioExistente.username || userTratado,
+            senha: dadosUsuario.senha || usuarioExistente.senha,
+            avatar: dadosUsuario.avatar || usuarioExistente.avatar || "avatar1"
         };
         
-        fs.writeFileSync(arquivoUsuarios, JSON.stringify(usuarios, null, 2), 'utf-8');
+        try {
+            fs.writeFileSync(arquivoUsuarios, JSON.stringify(usuarios, null, 2), 'utf-8');
+        } catch (erro) {
+            console.error("🔴 Falha ao persistir novos usuários no disco:", erro);
+        }
     },
 
     // ==========================================================================
@@ -57,10 +73,11 @@ const BancoDeDados = {
      * Retorna o estado atualizado das salas na memória física
      */
     obterTodasSalas: () => {
-        inicializarBanco(arquivoSalas);
         try { 
-            return JSON.parse(fs.readFileSync(arquivoSalas, 'utf-8')); 
+            const conteudo = fs.readFileSync(arquivoSalas, 'utf-8');
+            return JSON.parse(conteudo) || {}; 
         } catch (e) { 
+            console.warn("⚠️ Falha na leitura de salas.json, redefinindo cache local.");
             return {}; 
         }
     },
@@ -69,17 +86,20 @@ const BancoDeDados = {
      * Registra uma nova sala no repositório local
      */
     salvarSala: (idSala, dadosSala) => {
-        inicializarBanco(arquivoSalas);
         const salas = BancoDeDados.obterTodasSalas();
         
         salas[idSala] = {
             id: dadosSala.id,
             tipo: dadosSala.tipo,
             senha: dadosSala.senha,
-            usuarios: [] // Inicializa sem participantes fixados no JSON
+            usuarios: [] // Força inicialização com 0 participantes ativos de forma segura
         };
         
-        fs.writeFileSync(arquivoSalas, JSON.stringify(salas, null, 2), 'utf-8');
+        try {
+            fs.writeFileSync(arquivoSalas, JSON.stringify(salas, null, 2), 'utf-8');
+        } catch (erro) {
+            console.error("🔴 Falha ao persistir a criação de canais no disco:", erro);
+        }
     }
 };
 

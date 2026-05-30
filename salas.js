@@ -3,11 +3,12 @@ let meuApelido = "";
 
 /**
  * Função acionada pelo login.js assim que o login é efetuado com sucesso.
- * Ela ativa a sincronização inicial das salas de forma segura.
+ * Ativa a sincronização das salas e limpa estados antigos.
  */
 function iniciarSincronizacaoLobby(username) {
     meuApelido = username;
-    // Pede a lista atualizada de salas para o servidor
+    
+    // Força uma requisição imediata ao servidor para trazer o estado real das salas
     socket.emit('pedir-salas');
 }
 
@@ -45,7 +46,7 @@ function criarNovaSala() {
         return alert("Canais privados exigem a definição de uma senha de acesso.");
     }
 
-    // Dispara o evento de criação para o servidor Node.js
+    // Dispara o evento de criação para o servidor no Render
     socket.emit('criar-sala', { nomeSala, tipo, senha });
     
     // Limpa o campo de texto após o disparo
@@ -59,33 +60,36 @@ socket.on('sala-criada-sucesso', (nomeSala) => {
 });
 
 /**
- * Escuta as atualizações de salas ativas enviadas pelo servidor e renderiza na tela
- * Mostra a contagem exata e remove da lista visual as salas que sumirem (ficarem com 0 pessoas)
+ * Sincroniza em Tempo Real: Escuta as atualizações oficiais do servidor.
+ * Se uma sala ficou vazia, o servidor não a envia mais aqui, fazendo-a sumir da tela na hora.
  */
 socket.on('atualizar-salas', (salas) => {
     const containerLista = document.getElementById('lista-de-salas');
     if (!containerLista) return;
 
-    // Se não houver salas abertas no servidor
+    // Se o servidor retornar uma lista vazia ou nula, limpa o painel visual imediatamente
     if (!salas || salas.length === 0) {
-        containerLista.innerHTML = `<p class="txt-vazio">Nenhum canal ativo no momento. Crie o seu acima!</p>`;
+        containerLista.innerHTML = `<p class="txt-vazio">Nenhum canal ativo com usuários no momento. Crie o seu acima!</p>`;
         return;
     }
 
-    containerLista.innerHTML = ""; // Limpa o painel anterior para renovar os contadores
+    containerLista.innerHTML = ""; // Varre e limpa o painel anterior para renovar os contadores reais
 
     salas.forEach(sala => {
+        // Segurança contra canais fantasmas que possam vir zerados por instabilidade
+        if (sala.participantes === 0) return;
+
         const item = document.createElement('div');
         item.className = "sala-item";
         
         const iconeCadeado = sala.tipo === 'privada' ? '🔒' : '🌐';
         
-        // Elemento com as informações da sala e quantidade de pessoas online
+        // Elemento contendo as informações e o contador OFICIAL de usuários online
         const info = document.createElement('span');
         info.innerHTML = `
             <strong>${iconeCadeado} ${sala.id}</strong> 
             <small class="contador-usuarios" style="color: #248046; font-weight: bold; margin-left: 8px;">
-                ● ${sala.participantes} ${sala.participantes === 1 ? 'usuário' : 'usuários'} online
+                ● ${sala.participantes} ${sala.participantes === 1 ? 'membro' : 'membros'} online
             </small>
         `;
         
@@ -122,7 +126,6 @@ function clicarParaEntrar(nomeSala, tipo) {
 // Resposta do servidor liberando a entrada: Delega o controle para o chat.js passandro o apelido real
 socket.on('entrada-autorizada', (nomeSala) => {
     if (typeof inicializarPainelChatCall === "function") {
-        // Envia o nome do canal e o apelido do usuário logado para amarrar os sockets e peers
         inicializarPainelChatCall(nomeSala, meuApelido);
     } else {
         console.error("Erro do sistema: O módulo de chat/call (chat.js) não foi carregado.");

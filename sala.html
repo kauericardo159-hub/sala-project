@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Hub | Salas</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos exclusivos para a tela de bloqueio temporário */
+        .manutencao-container {
+            max-width: 500px;
+            margin: 60px auto;
+            padding: 40px 24px;
+            background-color: #141619;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 94, 0, 0.1);
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .manutencao-icone {
+            font-size: 50px;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        .manutencao-titulo {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        .manutencao-texto {
+            font-size: 14px;
+            color: #7c848f;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .badge-breve {
+            background-color: rgba(255, 94, 0, 0.1);
+            color: #ff5e00;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+
+    <main id="app-viewport" style="display: none;">
+        <div id="layout-barra-lateral"></div>
+        
+        <div id="layout-user-explorer">
+            <div class="manutencao-container">
+                <div class="manutencao-icone">🛠️</div>
+                <h2 class="manutencao-titulo">Módulo em Desenvolvimento</h2>
+                <p class="manutencao-texto">
+                    O sistema de listagem e criação de canais de voz está passando por otimizações na infraestrutura do banco de dados. Volte em breve para explorar novas salas!
+                </p>
+                <span class="badge-breve">Coming Soon</span>
+            </div>
+        </div>
+    </main>
+
+    <div id="z-core-loader" class="loader-wrapper">
+        <div class="spinner"></div>
+        <p>Verificando credenciais...</p>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <script>
+        const urlServidor = "https://sala-project.onrender.com";
+        const socket = io(urlServidor, { transports: ['websocket', 'polling'] });
+
+        // Trava de Segurança: Se não existir sessão ativa, chuta pro login
+        const sessaoAtiva = localStorage.getItem('zhub_session_data');
+        if (!sessaoAtiva) {
+            window.location.href = "login.html";
+        }
+
+        socket.on('connect', () => {
+            try {
+                const dados = JSON.parse(sessaoAtiva);
+                // Autentica silenciosamente para liberar o carregamento seguro da página
+                socket.emit('login-usuario', { username: dados.username, senha: dados.senha });
+            } catch(e) {
+                localStorage.removeItem('zhub_session_data');
+                window.location.href = "login.html";
+            }
+        });
+
+        socket.on('login-sucesso', () => {
+            // Remove o loader e exibe o Viewport de forma limpa
+            document.getElementById('z-core-loader').style.display = 'none';
+            document.getElementById('app-viewport').style.display = 'flex';
+        });
+
+        socket.on('erro', () => {
+            localStorage.removeItem('zhub_session_data');
+            window.location.href = "login.html";
+        });
+    </script>
+
+    <script src="barra.js"></script>
+</body>
+</html>

@@ -1,20 +1,10 @@
 /* ==========================================================================
-   VARIÁVEIS DE ESTILO (PADRÃO DISCORD DARK PRO)
+   AMBIENTE CENTRAL DE RENDERIZAÇÃO (ESTILO PROJECT Z)
    ========================================================================== */
 :root {
-    --fundo-app: #1e1f22;
-    --fundo-paineis: #2b2d31;
-    --fundo-cards: #313338;
-    --fundo-inputs: #1e1f22;
-    --blurple: #5865f2;
-    --blurple-hover: #4752c4;
-    --verde-sucesso: #248046;
-    --verde-hover: #1a6535;
-    --vermelho-cancelar: #da373c;
-    --vermelho-hover: #a92b2f;
-    --texto-principal: #f2f3f5;
-    --texto-secundario: #949ba4;
-    --borda-fina: rgba(255, 255, 255, 0.05);
+    --bg-absolute: #0b0c0e;       /* Preto absoluto de fundo */
+    --z-orange: #ff5e00;          /* Laranja neon assinatura */
+    --text-muted: #7c848f;
 }
 
 * {
@@ -24,481 +14,56 @@
 }
 
 body {
-    background-color: var(--fundo-app);
-    color: var(--texto-principal);
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    background-color: var(--bg-absolute);
+    color: #ffffff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
     min-height: 100vh;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-#app-container {
-    width: 100%;
-    max-width: 1200px;
-    padding: 15px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* Grid de Layout Oco preparado para receber os novos arquivos modulares */
+#app-viewport {
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 80px 1fr; /* 'barra' compacta na esquerda e 'user-explorer' no resto */
+    background-color: var(--bg-absolute);
 }
 
 /* ==========================================================================
-   ESTILOS DA INTERFACE DO LOBBY (TELA DE SALAS)
+   DESIGN DO CORE LOADER (SALA DE ESPERA DOS COMPONENTES)
    ========================================================================== */
-.container {
-    background-color: var(--fundo-paineis);
-    width: 100%;
-    max-width: 460px;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--borda-fina);
-    animation: suavizarEntrada 0.3s ease-out;
-}
-
-.lobby-header {
+.loader-wrapper {
     text-align: center;
-    margin-bottom: 20px;
+    animation: pulsarSuave 2s infinite ease-in-out;
 }
 
-.lobby-header h1 {
-    font-size: 26px;
-    font-weight: 800;
-    margin-bottom: 6px;
-    background: linear-gradient(90deg, #fff, var(--texto-secundario));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 94, 0, 0.1);
+    border-top: 3px solid var(--z-orange);
+    border-radius: 50%;
+    margin: 0 auto 16px auto;
+    animation: rodarSpinner 0.8s linear infinite;
 }
 
-.card-secao {
-    background-color: var(--fundo-cards);
-    padding: 18px;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    border: 1px solid var(--borda-fina);
-}
-
-.card-secao h3 {
-    font-size: 13px;
-    text-transform: uppercase;
+.loader-wrapper p {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
     letter-spacing: 0.5px;
-    color: #fff;
-    margin-bottom: 12px;
 }
 
-.card-secao label {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--texto-secundario);
-    margin-bottom: 8px;
+@keyframes rodarSpinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-/* Elementos de Formulários */
-input[type="text"],
-input[type="password"],
-select {
-    width: 100%;
-    padding: 12px;
-    background-color: var(--fundo-inputs);
-    border: 1px solid transparent;
-    border-radius: 4px;
-    color: var(--texto-principal);
-    font-size: 14px;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus,
-select:focus {
-    border-color: var(--blurple);
-    background-color: #111214;
-}
-
-select {
-    cursor: pointer;
-}
-
-.btn-principal {
-    background-color: var(--blurple);
-    color: #fff;
-    border: none;
-    padding: 14px;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    transition: background-color 0.2s, transform 0.1s;
-    margin-top: 8px;
-}
-
-.btn-principal:hover { background-color: var(--blurple-hover); }
-.btn-principal:active { transform: scale(0.99); }
-
-/* Itens da Lista de Canais */
-#lista-de-salas {
-    max-height: 220px;
-    overflow-y: auto;
-}
-
-.sala-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--fundo-inputs);
-    padding: 12px 14px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    border-left: 3px solid var(--blurple);
-}
-
-.sala-item span {
-    font-size: 14px;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.btn-entrar-sala {
-    background-color: var(--verde-sucesso);
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn-entrar-sala:hover { background-color: var(--verde-hover); }
-
-.txt-vazio {
-    color: var(--texto-secundario);
-    font-size: 13px;
-    text-align: center;
-    font-style: italic;
-    padding: 10px 0;
-}
-
-.container-chat {
-    display: flex;
-    width: 95vw;
-    height: 85vh;
-    background-color: var(--fundo-paineis);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
-    border: 1px solid var(--borda-fina);
-    animation: suavizarEntrada 0.3s ease-out;
-}
-
-/* Painel da Esquerda (Lista de pessoas na Call de Áudio) */
-.painel-call {
-    width: 40%;
-    background-color: #111214;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-}
-
-.call-header {
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 12px;
-}
-
-.call-header h2 {
-    font-size: 16px;
-    color: #fff;
-    font-weight: 700;
-}
-
-.status-call {
-    color: var(--verde-sucesso);
-    font-size: 12px;
-    display: block;
-    margin-top: 4px;
-}
-
-.video-grid {
-    flex-grow: 1;
-    overflow-y: auto;
-}
-
-.call-actions {
-    margin-top: 15px;
-}
-
-.btn-sair {
-    background-color: var(--vermelho-cancelar);
-    color: #fff;
-    border: none;
-    padding: 12px;
-    border-radius: 4px;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    transition: background-color 0.2s;
-}
-
-.btn-sair:hover { background-color: var(--vermelho-hover); }
-
-/* Painel da Direita (Histórico e envio de texto) */
-.painel-texto {
-    width: 60%;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--fundo-cards);
-    border-left: 1px solid rgba(0, 0, 0, 0.2);
-}
-
-.chat-area {
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.mensagem-bloco {
-    background-color: rgba(0, 0, 0, 0.12);
-    padding: 10px 14px;
-    border-radius: 4px;
-    border-left: 3px solid var(--blurple);
-    word-break: break-word;
-    animation: deslizarMensagem 0.15s ease-out;
-}
-
-.mensagem-bloco .autor {
-    font-weight: 700;
-    font-size: 13px;
-    margin-right: 6px;
-}
-
-.mensagem-bloco .texto {
-    font-size: 13.5px;
-    color: #dbdee1;
-}
-
-.input-area {
-    padding: 20px;
-    background-color: var(--fundo-cards);
-}
-
-/* ==========================================================================
-   ANIMAÇÕES E COMPORTAMENTO RESPONSIVO EM CELULARES
-   ========================================================================== */
-@keyframes suavizarEntrada {
-    from { opacity: 0; transform: scale(0.98); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes deslizarMensagem {
-    from { opacity: 0; transform: translateX(-4px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-
-/* Customização básica de Scrollbar */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #111214; border-radius: 10px; }
-
-@media (max-width: 768px) {
-    .container-chat {
-        flex-direction: column;
-        height: 88vh;
-    }
-    .painel-call {
-        width: 100%;
-        height: 35%;
-        border-bottom: 2px solid var(--fundo-app);
-    }
-    .painel-texto {
-        width: 100%;
-        height: 65%;
-    }
-}
-
-/* ==========================================================================
-   ESTILOS EXCLUSIVOS DA TELA DO CHAT E DA CALL (CANAL DE VOZ)
-   ========================================================================== */
-
-.container-chat {
-    display: flex;
-    width: 95vw;
-    height: 85vh;
-    background-color: var(--fundo-paineis);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
-    border: 1px solid var(--borda-fina);
-    animation: suavizarEntrada 0.3s ease-out;
-}
-
-/* ==========================================================================
-   PAINEL DA ESQUERDA: LISTA DE MEMBROS NA CALL DE VOZ
-   ========================================================================== */
-.painel-call {
-    width: 40%;
-    background-color: #111214;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-}
-
-.call-header {
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 12px;
-}
-
-.call-header h2 {
-    font-size: 16px;
-    color: #ffffff;
-    font-weight: 700;
-}
-
-.status-call {
-    color: var(--verde-sucesso);
-    font-size: 12px;
-    display: block;
-    margin-top: 4px;
-    font-weight: 600;
-}
-
-.video-grid {
-    flex-grow: 1;
-    overflow-y: auto;
-}
-
-#painel-usuarios-call {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Ações Inferiores da Call (Botão Desconectar) */
-.call-actions {
-    margin-top: 15px;
-}
-
-.btn-sair {
-    background-color: var(--vermelho-cancelar);
-    color: #ffffff;
-    border: none;
-    padding: 14px;
-    border-radius: 4px;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    width: 100%;
-    transition: background-color 0.2s, transform 0.1s;
-}
-
-.btn-sair:hover { 
-    background-color: var(--vermelho-hover); 
-}
-
-.btn-sair:active {
-    transform: scale(0.98);
-}
-
-/* ==========================================================================
-   PAINEL DA DIREITA: HISTÓRICO DE MENSAGENS E INPUT
-   ========================================================================== */
-.painel-texto {
-    width: 60%;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--fundo-cards);
-    border-left: 1px solid rgba(0, 0, 0, 0.2);
-}
-
-.chat-area {
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Blocos de Balão de Mensagem (Estilo Discord Moderno) */
-.mensagem-bloco {
-    background-color: rgba(0, 0, 0, 0.12);
-    padding: 12px 16px;
-    border-radius: 4px;
-    border-left: 3px solid var(--blurple);
-    word-break: break-word;
-    animation: deslizarMensagem 0.15s ease-out;
-}
-
-.mensagem-bloco .autor {
-    font-weight: 700;
-    font-size: 13.5px;
-    margin-right: 6px;
-}
-
-.mensagem-bloco .texto {
-    font-size: 13.5px;
-    color: #dbdee1;
-    line-height: 1.4;
-}
-
-/* Barra inferior de digitação */
-.input-area {
-    padding: 20px;
-    background-color: var(--fundo-cards);
-}
-
-.input-area input {
-    width: 100%;
-    padding: 14px;
-    background-color: var(--fundo-inputs);
-    border: none;
-    border-radius: 6px;
-    color: var(--texto-principal);
-    font-size: 14px;
-    outline: none;
-    transition: background-color 0.2s;
-}
-
-.input-area input:focus {
-    background-color: #111214;
-}
-
-/* ==========================================================================
-   COMPORTAMENTO RESPONSIVO PARA SMARTPHONES (MOBILE)
-   ========================================================================== */
-@media (max-width: 768px) {
-    .container-chat {
-        flex-direction: column;
-        height: 88vh;
-        width: 100vw;
-        border-radius: 0; /* Ocupa a tela cheia no celular */
-    }
-    .painel-call {
-        width: 100%;
-        height: 35%;
-        border-bottom: 2px solid var(--fundo-app);
-        padding: 15px;
-    }
-    .painel-texto {
-        width: 100%;
-        height: 65%;
-        border-left: none;
-    }
-    .chat-area {
-        padding: 15px;
-    }
-    .input-area {
-        padding: 15px;
-    }
+@keyframes pulsarSuave {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
 }

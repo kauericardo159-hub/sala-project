@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Hub | Autenticação</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+    <main class="auth-wrapper">
+        <div class="auth-brand-area">
+            <div class="brand-logo">Z</div>
+            <h1>Z-HUB</h1>
+            <p>Conecte-se ao multiverso de comunidades em tempo real.</p>
+        </div>
+
+        <section class="auth-card" id="card-autenticacao">
+            <header class="auth-header">
+                <h2 id="auth-main-title">Boas-vindas de volta!</h2>
+                <p id="auth-sub-title">Insira suas credenciais para acessar o lobby.</p>
+            </header>
+
+            <div class="auth-form">
+                <div id="container-avatar-cadastro" class="avatar-picker-wrapper" style="display: none;">
+                    <label>Escolha seu Avatar</label>
+                    <div class="avatar-grid">
+                        <input type="radio" name="user-avatar" value="avatar1" id="av1" checked>
+                        <label for="av1" class="avatar-option"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Felix" alt="Avatar 1"></label>
+                        
+                        <input type="radio" name="user-avatar" value="avatar2" id="av2">
+                        <label for="av2" class="avatar-option"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Aneka" alt="Avatar 2"></label>
+                        
+                        <input type="radio" name="user-avatar" value="avatar3" id="av3">
+                        <label for="av3" class="avatar-option"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Jack" alt="Avatar 3"></label>
+                        
+                        <input type="radio" name="user-avatar" value="avatar4" id="av4">
+                        <label for="av4" class="avatar-option"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Midnight" alt="Avatar 4"></label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="auth-username">Nome de usuário</label>
+                    <input type="text" id="auth-username" placeholder="@ seu_username" autocomplete="off" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="auth-password">Senha de acesso</label>
+                    <input type="password" id="auth-password" placeholder="••••••••••••" required>
+                </div>
+                
+                <button class="btn-auth-trigger" id="btn-auth-submit" onclick="gerenciarSubmissaoAuth()">Entrar na conta</button>
+            </div>
+
+            <footer class="auth-footer">
+                <p id="auth-switch-text">
+                    Precisando de uma conta? <span onclick="alternarModoProjectZ(true)">Criar uma conta</span>
+                </p>
+            </footer>
+        </section>
+    </main>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const urlServidor = "https://sala-project.onrender.com";
+        const socket = io(urlServidor, { transports: ['websocket', 'polling'] });
+        
+        socket.on('connect', () => console.log("🟢 Conectado ao motor Z-Hub"));
+        socket.on('erro', (msg) => {
+            alert("⚠️ " + msg);
+            resetarEstadoBotao();
+        });
+    </script>
+    <script src="login.js"></script>
+</body>
+</html>

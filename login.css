@@ -1,114 +1,229 @@
 /* ==========================================================================
-   INTERFACES DE AUTENTICAÇÃO (LOGIN / REGISTRO)
+   PALETA NEON LARANJA & CARBONO (ESTILO PROJECT Z)
    ========================================================================== */
+:root {
+    --bg-absolute: #0b0c0e;       /* Preto absoluto de fundo */
+    --bg-card: #141619;           /* Cinza escuro dos painéis */
+    --bg-inputs: #1d2024;         /* Inputs internos */
+    --z-orange: #ff5e00;          /* Laranja assinatura Project Z */
+    --z-orange-hover: #e05200;    /* Laranja escurecido para feedback de hover */
+    --text-pure: #ffffff;
+    --text-muted: #7c848f;
+    --glow-orange: rgba(255, 94, 0, 0.25);
+}
 
-.tela-login-container {
-    background-color: var(--fundo-paineis);
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background-color: var(--bg-absolute);
+    color: var(--text-pure);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.auth-wrapper {
     width: 100%;
-    max-width: 420px;
+    max-width: 900px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+}
+
+/* Painel de Branding Lateral */
+.auth-brand-area {
+    text-align: left;
+    padding-right: 20px;
+}
+
+.auth-brand-area .brand-logo {
+    width: 60px;
+    height: 60px;
+    background-color: var(--z-orange);
+    color: #000;
+    font-size: 32px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px var(--glow-orange);
+}
+
+.auth-brand-area h1 {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+}
+
+.auth-brand-area p {
+    color: var(--text-muted);
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Card Formulario */
+.auth-card {
+    background-color: var(--bg-card);
     padding: 40px;
-    border-radius: 8px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--borda-fina);
-    animation: suavizarEntrada 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
 
-.login-header {
-    margin-bottom: 24px;
-    text-align: center;
+.auth-header {
+    margin-bottom: 30px;
 }
 
-.login-header h2 {
-    color: #ffffff;
+.auth-header h2 {
     font-size: 24px;
     font-weight: 700;
-    letter-spacing: -0.5px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
-.login-header p {
-    color: var(--texto-secundario);
+.auth-header p {
+    color: var(--text-muted);
     font-size: 14px;
-    line-height: 1.4;
 }
 
-.formulario-auth {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
+/* Inputs de Texto */
+.input-group {
+    margin-bottom: 20px;
 }
 
-.formulario-auth label {
+.input-group label {
     display: block;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
-    color: var(--texto-secundario);
+    color: var(--text-muted);
     margin-bottom: 8px;
     letter-spacing: 0.5px;
 }
 
-.formulario-auth input {
-    margin-bottom: 20px;
+.input-group input {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--bg-inputs);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--text-pure);
+    font-size: 15px;
+    outline: none;
+    transition: all 0.2s ease;
 }
 
-.login-alternador {
-    color: var(--texto-secundario);
-    font-size: 13px;
-    margin-top: 20px;
-    text-align: left;
+.input-group input:focus {
+    border-color: var(--z-orange);
+    box-shadow: 0 0 10px var(--glow-orange);
 }
 
-.login-alternador span {
-    color: #00aff4;
-    cursor: pointer;
-    font-weight: 500;
-    transition: color 0.2s ease;
+/* Seletor Avançado de Avatares */
+.avatar-picker-wrapper {
+    margin-bottom: 24px;
 }
 
-.login-alternador span:hover {
-    text-decoration: underline;
-    color: #33bfff;
-}
-
-/* Badge de Identificação embutida no cabeçalho do Lobby */
-.user-badge-perfil {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background-color: var(--fundo-inputs);
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    margin-top: 15px;
-    border: 1px solid var(--borda-fina);
-    text-align: left;
-}
-
-.user-badge-perfil .status-indicador {
-    color: var(--verde-sucesso);
-    font-size: 14px;
-    animation: pulsarStatus 2s infinite;
-}
-
-#perfil-tag-usuario {
-    font-weight: 700;
-    color: #ffffff;
-}
-
-#perfil-id-usuario {
-    color: var(--texto-secundario);
+.avatar-picker-wrapper label {
+    display: block;
     font-size: 12px;
-    font-family: monospace;
-    margin-left: auto; /* Joga o ID para a extrema direita */
-    background: rgba(255, 255, 255, 0.05);
-    padding: 2px 6px;
-    border-radius: 4px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
 }
 
-/* Animação sutil para o ponto de status online */
-@keyframes pulsarStatus {
-    0% { opacity: 0.6; }
-    50% { opacity: 1; }
-    100% { opacity: 0.6; }
+.avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.avatar-grid input[type="radio"] {
+    display: none;
+}
+
+.avatar-option {
+    display: block;
+    cursor: pointer;
+    background-color: var(--bg-inputs);
+    padding: 8px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.avatar-option img {
+    width: 100%;
+    max-width: 45px;
+    height: auto;
+}
+
+.avatar-grid input[type="radio"]:checked + .avatar-option {
+    border-color: var(--z-orange);
+    background-color: rgba(255, 94, 0, 0.05);
+}
+
+/* Botão de Ação */
+.btn-auth-trigger {
+    background-color: var(--z-orange);
+    color: #ffffff;
+    border: none;
+    padding: 16px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.2s, opacity 0.2s;
+    margin-top: 10px;
+}
+
+.btn-auth-trigger:hover {
+    background-color: var(--z-orange-hover);
+}
+
+.auth-footer {
+    margin-top: 25px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.auth-footer span {
+    color: var(--z-orange);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.auth-footer span:hover {
+    text-decoration: underline;
+}
+
+/* Ajustes para Telas de Celulares */
+@media (max-width: 768px) {
+    .auth-wrapper {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .auth-brand-area {
+        text-align: center;
+        padding-right: 0;
+    }
+    .auth-brand-area .brand-logo {
+        margin: 0 auto 15px auto;
+    }
+    .auth-card {
+        padding: 24px;
+    }
 }

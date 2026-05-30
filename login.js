@@ -1,76 +1,125 @@
-let modoCadastro = false;
-let contaLogada = { username: "", id: "" };
+let modoCadastroAtivo = false;
 
 /**
- * Altera dinamicamente os textos e o comportamento da tela entre Login e Registro
- * @param {boolean} queroRegistrar - Define se a tela vai para o modo de cadastro
+ * Verifica sessões salvas assim que a página termina de renderizar no dispositivo
  */
-function alternarModoAuth(queroRegistrar) {
-    modoCadastro = queroRegistrar;
-    const titulo = document.getElementById('login-titulo');
-    const subtitulo = document.getElementById('login-subtitulo');
-    const botao = document.getElementById('btn-auth-acao');
-    const alternador = document.getElementById('txt-alternar-auth');
+window.addEventListener('DOMContentLoaded', () => {
+    const cacheSessao = localStorage.getItem('zhub_session_data');
+    if (cacheSessao) {
+        try {
+            const dados = JSON.parse(cacheSessao);
+            console.log(`🔄 Reconexão Automática: Solicitando acesso para @${dados.username}`);
+            
+            // Dispara validação automática direto com o servidor Render
+            if (socket.connected) {
+                despacharValidacaoSilenciosa(dados);
+            } else {
+                socket.on('connect', () => despacharValidacaoSilenciosa(dados));
+            }
+        } catch (err) {
+            localStorage.removeItem('zhub_session_data');
+        }
+    }
+});
 
-    // Limpa os campos ao alternar para evitar carregar dados incorretos
-    document.getElementById('login-username').value = "";
-    document.getElementById('login-password').value = "";
+function despacharValidacaoSilenciosa(dados) {
+    document.getElementById('auth-main-title').innerText = "Restaurando sessão...";
+    socket.emit('login-usuario', { username: dados.username, senha: dados.senha });
+}
 
-    if (modoCadastro) {
+/**
+ * Alterna dinamicamente a UI entre Entrar na Conta e Criar uma Conta
+ */
+function alternarModoProjectZ(queroRegistrar) {
+    modoCadastroAtivo = queroRegistrar;
+    
+    const titulo = document.getElementById('auth-main-title');
+    const subtitulo = document.getElementById('auth-sub-title');
+    const botao = document.getElementById('btn-auth-submit');
+    const alternadorText = document.getElementById('auth-switch-text');
+    const painelAvatar = document.getElementById('container-avatar-cadastro');
+
+    // Reseta inputs para transição limpa
+    document.getElementById('auth-username').value = "";
+    document.getElementById('auth-password').value = "";
+
+    if (modoCadastroAtivo) {
         titulo.innerText = "Criar uma conta";
-        subtitulo.innerText = "Escolha um @user original e uma senha segura";
-        botao.innerText = "Registrar-se";
-        alternador.innerHTML = 'Já tem uma conta? <span onclick="alternarModoAuth(false)">Entrar</span>';
+        subtitulo.innerText = "Escolha uma tag de usuário única e um avatar.";
+        botao.innerText = "Criar minha conta";
+        painelAvatar.style.display = "block";
+        alternadorText.innerHTML = 'Já tem uma conta? <span onclick="alternarModoProjectZ(false)">Entrar na conta</span>';
     } else {
         titulo.innerText = "Boas-vindas de volta!";
-        subtitulo.innerText = "Estamos muito animados em ver você de novo!";
-        botao.innerText = "Entrar";
-        alternador.innerHTML = 'Precisando de uma conta? <span onclick="alternarModoAuth(true)">Registre-se</span>';
+        subtitulo.innerText = "Insira suas credenciais para acessar o lobby.";
+        botao.innerText = "Entrar na conta";
+        painelAvatar.style.display = "none";
+        alternadorText.innerHTML = 'Precisando de uma conta? <span onclick="alternarModoProjectZ(true)">Criar uma conta</span>';
     }
 }
 
 /**
- * Coleta os dados digitados e despacha o evento correspondente para o servidor Node.js
+ * Recolhe os dados e faz o envio dos pacotes via websockets
  */
-function executarAutenticacao() {
-    const userIn = document.getElementById('login-username').value.trim();
-    const passIn = document.getElementById('login-password').value;
+function gerenciarSubmissaoAuth() {
+    const userIn = document.getElementById('auth-username').value.trim();
+    const passIn = document.getElementById('auth-password').value;
+    const botao = document.getElementById('btn-auth-submit');
 
     if (!userIn || !passIn) {
-        return alert("Por favor, preencha todos os campos antes de prosseguir.");
+        return alert("Por favor, preencha todos os campos obrigatórios.");
     }
 
-    if (modoCadastro) {
+    // Trava preventiva contra múltiplos cliques agressivos
+    botao.disabled = true;
+    botao.style.opacity = "0.6";
+    botao.innerText = modoCadastroAtivo ? "Registrando dados..." : "Autenticando...";
+
+    // Salva a senha na memória RAM volátil para o localStorage caso o login seja aceito
+    window.senhaTemporariaSessao = passIn;
+
+    if (modoCadastroAtivo) {
+        // Coleta o avatar selecionado no grid de opções
+        const avatarSelecionado = document.querySelector('input[name="user-avatar"]:checked').value;
+        
+        // Armazena a preferência de avatar localmente
+        localStorage.setItem(`avatar_@${userIn.toLowerCase()}`, avatarSelecionado);
+
         socket.emit('cadastrar-usuario', { username: userIn, senha: passIn });
     } else {
         socket.emit('login-usuario', { username: userIn, senha: passIn });
     }
 }
 
-// Escuta a confirmação de cadastro bem-sucedido vinda do servidor
+function resetarEstadoBotao() {
+    const botao = document.getElementById('btn-auth-submit');
+    if (botao) {
+        botao.disabled = false;
+        botao.style.opacity = "1";
+        botao.innerText = modoCadastroAtivo ? "Criar minha conta" : "Entrar na conta";
+    }
+}
+
+// Resposta em caso de sucesso no Registro
 socket.on('cadastro-sucesso', (dados) => {
-    alert(`Conta @${dados.username} gerada e salva com sucesso! Prossiga fazendo o seu login.`);
-    alternarModoAuth(false); // Transiciona o usuário de volta para a tela de login
+    alert(`Conta @${dados.username} gerada com sucesso! Entre agora usando seus dados.`);
+    resetarEstadoBotao();
+    alternarModoProjectZ(false); // Transiciona para a tela de Login
 });
 
-// Escuta o sucesso de login, liberando o acesso ao Lobby de canais
+// Resposta em caso de sucesso no Login (Manual ou Automático)
 socket.on('login-sucesso', (dados) => {
-    contaLogada = dados;
+    console.log("🟢 Login aceito pelo servidor.");
 
-    // Atualiza os dados de perfil no topo do Lobby (salas.js)
-    document.getElementById('perfil-tag-usuario').innerText = `@${dados.username}`;
-    document.getElementById('perfil-id-usuario').innerText = `ID: ${dados.id}`;
-
-    // Executa a transição visual das telas ocultando o login e mostrando as salas
-    document.getElementById('tela-autenticacao').style.display = 'none';
-    document.getElementById('tela-salas').style.display = 'block';
-    
-    // Alinha o barramento global do salas.js para usar o nick autenticado
-    if (typeof iniciarSincronizacaoLobby === "function") {
-        iniciarSincronizacaoLobby(dados.username);
-    } else {
-        // Fallback caso o salas.js ainda não tenha carregado a função
-        meuApelido = dados.username;
-        socket.emit('pedir-salas');
+    // Se houve preenchimento manual de senha, valida e grava a persistência de longo prazo
+    if (window.senhaTemporariaSessao) {
+        localStorage.setItem('zhub_session_data', JSON.stringify({
+            username: dados.username,
+            senha: window.senhaTemporariaSessao
+        }));
+        delete window.senhaTemporariaSessao;
     }
+
+    // Redireciona o usuário oficialmente para o arquivo index.html (Lobby de salas)
+    window.location.href = "index.html";
 });
