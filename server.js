@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const Banco = require('./bancos'); // Importa o gerenciador que criamos
+const Banco = require('./bancos'); // Importa o gerenciador de dados em memória
 
 const app = express();
 const GITHUB_PAGES_URL = "https://kauericardo159-hub.github.io";
@@ -40,18 +40,34 @@ io.on('connection', (socket) => {
 
     // 2. Criação de Sala
     socket.on('create_room', (roomPayload) => {
+        // Encontra os dados estruturados do criador enviados dentro do payload
+        const creatorData = roomPayload.creatorInfo; 
+        
         const novaSala = Banco.createRoom(roomPayload);
         
         if (novaSala) {
-            // Vincula o ID do socket do criador para controle interno
-            roomPayload.users.push({
-                uid: roomPayload.ownerId,
-                name: roomPayload.ownerId.split('#')[0], // Pega o nome antes do #
-                avatar: "user-photo.jpg", // O JS do front atualiza isso depois
-                socketId: socket.id,
-                micOn: false,
-                isSpeaking: false
-            });
+            // Se o front enviou os dados do criador, injetamos ele com seu perfil atualizado
+            if (creatorData) {
+                novaSala.users.push({
+                    uid: creatorData.uid,
+                    name: creatorData.name, 
+                    avatar: creatorData.avatar || "user-photo.jpg",
+                    socketId: socket.id,
+                    micOn: true, // Já inicia com mic ativo ao criar
+                    isSpeaking: false
+                });
+            } else {
+                // Fallback de segurança caso falte o payload do criador
+                const ownerName = roomPayload.ownerId.startsWith('@') ? roomPayload.ownerId.substring(1) : roomPayload.ownerId;
+                novaSala.users.push({
+                    uid: roomPayload.ownerId,
+                    name: ownerName, 
+                    avatar: "user-photo.jpg",
+                    socketId: socket.id,
+                    micOn: true,
+                    isSpeaking: false
+                });
+            }
 
             socket.join(novaSala.id);
             socket.emit('room_joined_success', novaSala);
@@ -101,12 +117,19 @@ io.on('connection', (socket) => {
 
     // 4. Sair da Sala voluntariamente
     socket.on('leave_room', ({ roomId, uid }) => {
+        const room = Banco.findRoomById(roomId);
+        let userName = uid;
+
+        if (room) {
+            const user = room.users.find(u => u.uid === uid);
+            if (user) userName = user.name;
+        }
+
         const roomAtualizada = Banco.removeUserFromRoom(roomId, uid);
         socket.leave(roomId);
 
         if (roomAtualizada) {
-            const user = roomAtualizada.users.find(u => u.uid === uid);
-            io.to(roomId).emit('room_notification', { text: `Alguém saiu da sala.` });
+            io.to(roomId).emit('room_notification', { text: `${userName} saiu da sala.` });
             io.to(roomId).emit('room_users_updated', roomAtualizada.users);
         }
 
@@ -131,27 +154,73 @@ io.on('connection', (socket) => {
 
     // 6. Atualizar Status do Microfone (🎙️ / 🔇)
     socket.on('update_mic_status', ({ roomId, micOn }) => {
-        // Encontra o usuário correspondente ao socket atual
         const room = Banco.findRoomById(roomId);
         if (room) {
             const user = room.users.find(u => u.socketId === socket.id);
             if (user) {
                 const listaUsuariosAtualizada = Banco.updateUserMic(roomId, user.uid, micOn);
                 if (listaUsuariosAtualizada) {
-                    // Repassa a lista atualizada para os cards mudarem no front
                     io.to(roomId).emit('room_users_updated', listaUsuariosAtualizada);
                 }
             }
         }
     });
 
-    // 7. Chat de Texto da Sala (Mensagens instantâneas)
+    // 7. Atualizar Status de Fala (Indicação Visual Verde de Volume)
+    socket.on('update_speaking_status', ({ roomId, isSpeaking }) => {
+        const room = Banco.findRoomById(roomId);
+        if (room) {
+            const user = room.users.find(u => u.socketId === socket.id);
+            if (user) {
+                user.isSpeaking = isSpeaking;
+                // Transmite o estado de fala para todos na sala alterarem as bordas dos cards
+                socket.to(roomId).emit('room_users_updated', room.users);
+            }
+        }
+    });
+
+    // 8. Atualizar Perfil no Meio da Conversa (Nome e Avatar Editados)
+    socket.on('update_user_profile', ({ roomId, user }) => {
+        const room = Banco.findRoomById(roomId);
+        if (room) {
+            const localUser = room.users.find(u => u.uid === user.uid);
+            if (localUser) {
+                localUser.name = user.name;
+                localUser.avatar = user.avatar;
+                // Sincroniza a mudança de foto/nome com os cards de todo mundo
+                io.to(roomId).emit('room_users_updated', room.users);
+            }
+        }
+    });
+
+    // 9. Expulsar Usuário (Ação Exclusiva do Owner)
+    socket.on('kick_user_request', ({ roomId, targetUid }) => {
+        const room = Banco.findRoomById(roomId);
+        if (room) {
+            const targetUser = room.users.find(u => u.uid === targetUid);
+            if (targetUser && targetUser.socketId) {
+                // Manda um sinal privado direto para o expulso sair da tela
+                io.to(targetUser.socketId).emit('room_kicked');
+                
+                // Remove ele do controle de dados
+                Banco.removeUserFromRoom(roomId, targetUid);
+                
+                // Notifica o resto dos participantes na sala
+                io.to(roomId).emit('room_users_updated', room.users);
+                io.to(roomId).emit('room_notification', { text: `${targetUser.name} foi expulso da sala pelo proprietário.` });
+                
+                // Atualiza a listagem da Home geral
+                io.emit('update_room_list', Banco.getPublicRoomsList());
+            }
+        }
+    });
+
+    // 10. Chat de Texto da Sala (Mensagens instantâneas)
     socket.on('send_chat_message', (messageData) => {
-        // Envia para todo mundo na sala, EXCETO para quem enviou (já que o front renderiza direto ao clicar em enviar)
         socket.to(messageData.roomId).emit('receive_chat_message', messageData);
     });
 
-    // 8. Queda de Conexão ou Fechamento da aba (Disconnect)
+    // 11. Queda de Conexão ou Fechamento da aba (Disconnect)
     socket.on('disconnect', () => {
         console.log(`Usuário desconectou do socket: ${socket.id}`);
         
@@ -166,8 +235,8 @@ io.on('connection', (socket) => {
     });
 });
 
-// O Render define a porta automaticamente, ou usa a 3000 localmente
+// O Render define a porta automaticamente pela variável PORT, ou usa a 3000 localmente
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Servidor rodando e pronto para receber conexões na porta ${PORT}`);
+    console.log(`Servidor profissional rodando na porta ${PORT}`);
 });

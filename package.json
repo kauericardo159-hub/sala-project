@@ -1,24 +1,39 @@
 {
   "name": "sala-project",
   "version": "1.0.0",
-  "description": "Um site simples de chat online",
+  "description": "Plataforma de salas de voz e chat em tempo real — Versão Alfa",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
+  "keywords": [
+    "express",
+    "socketio",
+    "realtime",
+    "webaudio",
+    "chat",
+    "voice-room"
+  ],
+  "author": "Kauê Ricardo",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kauericardo159-hub/sala-project.git"
   },
+  "bugs": {
+    "url": "https://github.com/kauericardo159-hub/sala-project/issues"
+  },
   "homepage": "https://kauericardo159-hub.github.io/sala-project/",
-  "render_backend_url": "https://sala-project.onrender.com",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.19.2",
-    "socket.io": "^4.7.5",
-    "cors": "^2.8.5"
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

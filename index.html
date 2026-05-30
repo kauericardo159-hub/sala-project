@@ -3,131 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sala Project - Chat & Voz</title>
+    <title>Sala Project — Alpha Version</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="container">
-        
-        <div id="screen-login" style="display: none;">
-            <h2>Boas-vindas ao Sala Project!</h2>
-            <p>Escolha um nome de usuário para começar a conversar.</p>
+    <div class="app-wrapper">
+
+        <div id="screen-login" class="auth-card" style="display: none;">
+            <div class="auth-header">
+                <h2>Sala Project</h2>
+                <p id="auth-subtitle">De volta ao ecossistema? Faça seu login.</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Entrar</button>
+                <button id="tab-register" class="tab-btn" onclick="switchAuthTab('register')">Criar Conta</button>
+            </div>
+
+            <div class="auth-form-container">
+                <div class="input-group">
+                    <label for="login-username">Seu @username (Apenas letras minúsculas)</label>
+                    <div class="input-wrapper">
+                        <span class="input-prefix">@</span>
+                        <input type="text" id="login-username" placeholder="usuario" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="input-group" id="group-displayname" style="display: none;">
+                    <label for="login-displayname">Nome de Exibição (Como os outros te veem)</label>
+                    <input type="text" id="login-displayname" placeholder="Ex: Kauê Ricardo">
+                </div>
+
+                <div class="input-group">
+                    <label for="login-password">Sua Senha</label>
+                    <input type="password" id="login-password" placeholder="••••••••">
+                </div>
+
+                <button id="btn-auth-submit" class="btn-primary full-width" onclick="processAuth()">
+                    Entrar com Segurança
+                </button>
+            </div>
+        </div>
+
+        <div id="screen-home" class="dashboard-layout" style="display: none;">
             
-            <input type="text" id="login-username" placeholder="Digite seu nome (ex: Kauê)" required>
-            <button class="btn-primary" style="width: 100%;" onclick="loginOrCreateAccount(document.getElementById('login-username').value)">
-                Entrar / Criar Conta
-            </button>
-        </div>
-
-        <div id="screen-home" style="display: none;">
-            <div class="home-layout">
-                
-                <div class="left-column" style="display: flex; flex-direction: column; gap: 20px;">
-                    
-                    <div class="profile-card">
-                        <div class="avatar-container">
-                            <img id="avatar-preview" src="user-photo.jpg" alt="Foto de Perfil" class="avatar-img">
-                            <label for="avatar-input" class="avatar-label">📷</label>
-                            <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(event)">
-                        </div>
-                        <h3 id="user-uid" style="margin-bottom: 4px;">Nome#0000</h3>
-                        <p style="color: var(--text-muted); font-size: 13px;">Clique no ícone para alterar sua foto</p>
+            <aside class="sidebar-user">
+                <div class="user-profile-widget">
+                    <div class="avatar-edit-container">
+                        <img id="avatar-preview" src="user-photo.jpg" alt="Sua Foto" class="user-main-avatar">
+                        <label for="avatar-input" class="avatar-hover-trigger" title="Alterar foto de perfil">
+                            <span>Alterar</span>
+                        </label>
+                        <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(event)">
                     </div>
-
-                    <div class="profile-card" style="text-align: left;">
-                        <h3>Criar uma Sala</h3>
-                        
-                        <label style="font-size: 13px; color: var(--text-muted);">Nome da Sala</label>
-                        <input type="text" id="room-name-input" placeholder="Ex: Galera do Game">
-
-                        <label style="font-size: 13px; color: var(--text-muted);">Privacidade</label>
-                        <select id="room-type-select" onchange="document.getElementById('room-password-container').style.display = this.value === 'private' ? 'block' : 'none'">
-                            <option value="public">Pública 🔓</option>
-                            <option value="private">Privada 🔒</option>
-                        </select>
-
-                        <div id="room-password-container" style="display: none;">
-                            <label style="font-size: 13px; color: var(--text-muted);">Senha de Acesso</label>
-                            <input type="password" id="room-password-input" placeholder="Digite a senha da sala">
-                        </div>
-
-                        <label style="font-size: 13px; color: var(--text-muted);">Limite de Pessoas</label>
-                        <input type="number" id="room-limit-input" value="10" min="2" max="99">
-
-                        <button class="btn-success" style="width: 100%; margin-top: 10px;" onclick="createRoomData()">
-                            🚀 Criar e Entrar
-                        </button>
+                    <div class="user-meta">
+                        <h3 id="sidebar-display-name">Carregando...</h3>
+                        <span id="user-uid" class="user-tag-badge">@username</span>
                     </div>
-
                 </div>
 
-                <div class="rooms-section">
-                    <h2>Salas Disponíveis <span class="live-badge">Ao Vivo</span></h2>
-                    <p style="color: var(--text-muted); font-size: 14px;">Selecione uma sala pública ou digite a senha de uma sala privada para entrar.</p>
-                    
-                    <div id="rooms-live-list" class="rooms-list">
-                        <div style="color: var(--text-muted); text-align: center; padding: 20px;">
-                            Nenhuma sala ativa no momento. Seja o primeiro a criar uma!
+                <div class="config-panel">
+                    <h4>Gerenciar Perfil</h4>
+                    <div class="input-group">
+                        <label>Alterar Nome de Exibição</label>
+                        <div class="inline-action-input">
+                            <input type="text" id="profile-display-name" placeholder="Novo nome...">
+                            <button class="btn-success icon-btn" onclick="updateDisplayName()" title="Salvar Novo Nome">💾</button>
                         </div>
                     </div>
                 </div>
 
-            </div>
+                <div class="config-panel room-builder">
+                    <h4>Criar Nova Sala</h4>
+                    
+                    <div class="input-group">
+                        <label>Nome da Sala</label>
+                        <input type="text" id="room-name-input" placeholder="Ex: Call do Campeonato">
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Privacidade</label>
+                            <select id="room-type-select" onchange="togglePasswordVisibility(this.value)">
+                                <option value="public">Pública 🔓</option>
+                                <option value="private">Privada 🔒</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Limite</label>
+                            <input type="number" id="room-limit-input" value="8" min="2" max="50">
+                        </div>
+                    </div>
+
+                    <div class="input-group" id="room-password-container" style="display: none;">
+                        <label>Senha de Acesso</label>
+                        <input type="password" id="room-password-input" placeholder="Defina a senha da sala">
+                    </div>
+
+                    <button class="btn-primary full-width" style="margin-top: 10px;" onclick="createRoomData()">
+                        🚀 Lançar Sala de Voz
+                    </button>
+                </div>
+
+                <button class="btn-danger-text full-width" onclick="logout()">Desconectar da Conta</button>
+            </aside>
+
+            <main class="main-rooms-feed">
+                <header class="feed-header">
+                    <div class="feed-title">
+                        <h2>Salas Disponíveis</h2>
+                        <p>Participe de conversas por voz e texto em tempo real.</p>
+                    </div>
+                    <div class="live-status-indicator">
+                        <span class="pulse-dot"></span> Ao Vivo
+                    </div>
+                </header>
+
+                <div id="rooms-live-list" class="rooms-grid-container">
+                    </div>
+            </main>
         </div>
 
-        <div id="screen-room" style="display: none;">
-            <div class="room-layout">
-                
-                <div class="room-header">
-                    <div>
-                        <h2 id="room-title" style="margin-bottom: 0;">Nome da Sala</h2>
+        <div id="screen-room" class="room-layout" style="display: none;">
+            
+            <section class="voice-workspace">
+                <header class="room-workspace-header">
+                    <div class="room-identity">
+                        <span class="hash-tag">#</span>
+                        <h2 id="room-title">Nome da Sala</h2>
                     </div>
-                    
-                    <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="room-action-controls">
                         <div id="owner-controls" style="display: none;">
-                            <button class="btn-danger" style="padding: 8px 14px;" onclick="deleteRoomByOwner()">👑 Excluir Sala</button>
+                            <button class="btn-danger outline" onclick="deleteRoomByOwner()">👑 Fechar Sala</button>
                         </div>
-                        <button class="btn-danger" style="padding: 8px 14px;" onclick="leaveRoom()">Sair da Sala</button>
+                        <button class="btn-danger" onclick="leaveRoom()">Sair da Sala</button>
                     </div>
+                </header>
+
+                <div id="voice-cards-container" class="voice-subscribers-grid">
+                    </div>
+
+                <footer class="voice-dock-controls">
+                    <button id="btn-mic" class="btn-success status-dock-btn" onclick="toggleMicrophone()">
+                        🎙️ Microfone Ativo
+                    </button>
+                    <button class="btn-danger status-dock-btn" onclick="leaveRoom()">
+                        🔇 Desconectar Call
+                    </button>
+                </footer>
+            </section>
+
+            <section class="text-workspace">
+                <div class="workspace-chat-header">
+                    <h3>Bate-papo de Texto</h3>
                 </div>
 
-                <div class="room-body">
-                    
-                    <div class="voice-container">
-                        <h3 style="font-size: 16px; color: var(--text-muted); margin-bottom: 12px;">Chamada de Voz</h3>
-                        
-                        <div id="voice-cards-container" class="voice-grid">
-                            </div>
-
-                        <div class="voice-controls">
-                            <button id="btn-mic" class="btn-primary" onclick="toggleMicrophone()">Ativar Microfone</button>
-                            <button class="btn-danger" onclick="leaveRoom()">Sair da Call</button>
-                        </div>
+                <div id="chat-area" class="chat-viewport">
                     </div>
 
-                    <div class="chat-container">
-                        <h3 style="font-size: 16px; color: var(--text-muted); margin-bottom: 12px;">Bate-papo</h3>
-                        
-                        <div id="chat-area" class="chat-messages">
-                            </div>
+                <footer class="chat-input-wrapper">
+                    <button class="chat-addon-btn" title="Enviar arquivos de mídia" onclick="alert('Selecione arquivos em breve!')">
+                        ➕
+                    </button>
+                    <input type="text" id="chat-input" placeholder="Conversar com a sala..." onkeydown="if(event.key === 'Enter') sendTextMessage()">
+                    <button class="chat-send-btn" onclick="sendTextMessage()">Enviar</button>
+                </footer>
+            </section>
 
-                        <div class="chat-footer">
-                            <button class="btn-file" title="Enviar Arquivo" onclick="alert('Funcionalidade de arquivos em breve!')">📎</button>
-                            <input type="text" id="chat-input" placeholder="Conversar na sala..." onkeydown="if(event.key === 'Enter') sendTextMessage()">
-                            <button class="btn-primary" onclick="sendTextMessage()">Enviar</button>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
         </div>
 
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     
+    <script>
+        let currentAuthMode = 'login';
+
+        function switchAuthTab(mode) {
+            currentAuthMode = mode;
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+            const groupDisplayName = document.getElementById('group-displayname');
+            const btnSubmit = document.getElementById('btn-auth-submit');
+            const subtitle = document.getElementById('auth-subtitle');
+
+            if (mode === 'login') {
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+                groupDisplayName.style.display = 'none';
+                btnSubmit.innerText = 'Entrar com Segurança';
+                subtitle.innerText = 'De volta ao ecossistema? Faça seu login.';
+            } else {
+                tabRegister.classList.add('active');
+                tabLogin.classList.remove('active');
+                groupDisplayName.style.display = 'block';
+                btnSubmit.innerText = 'Criar Nova Conta';
+                subtitle.innerText = 'Crie uma credencial única e defina seu perfil.';
+            }
+        }
+
+        function togglePasswordVisibility(value) {
+            const container = document.getElementById('room-password-container');
+            container.style.display = value === 'private' ? 'block' : 'none';
+        }
+
+        // Intercepta a autenticação para enviar ao script principal
+        function processAuth() {
+            if (typeof loginOrCreateAccount === "function") {
+                loginOrCreateAccount(currentAuthMode);
+            } else {
+                console.error("Função de autenticação não encontrada no script.js");
+            }
+        }
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
