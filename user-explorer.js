@@ -1,6 +1,6 @@
 /**
  * Componente Modular 'User-Explorer' - Estilo Project Z
- * Renderiza em tempo real a lista de usuários online no servidor.
+ * Renderiza a lista completa de usuários cadastrados no banco, diferenciando online/offline.
  */
 (function() {
     // 1. RECUPERA OS DADOS DA SESSÃO LOCAL DO USUÁRIO
@@ -9,6 +9,9 @@
 
     // Helper aprimorado para gerar ou renderizar a foto (Suporta Base64 e IDs nativos)
     function obterUrlAvatar(usernameAlvo) {
+        if (!usernameAlvo) return `https://api.dicebear.com/7.x/bottts/svg?seed=Felix`;
+        
+        // Varre o localStorage ignorando diferenças de maiúsculas/minúsculas na chave
         const avatarTipo = localStorage.getItem(`avatar_@${usernameAlvo.toLowerCase()}`) || 'avatar1';
         
         if (avatarTipo.startsWith('data:image')) return avatarTipo; // Retorna o Base64 caso seja foto do dispositivo
@@ -49,8 +52,16 @@
             border-radius: 16px;
             margin-bottom: 10px;
             border: 1px solid rgba(255, 255, 255, 0.02);
-            transition: transform 0.2s, border-color 0.2s;
-            cursor: pointer; /* Feedback visual de clique */
+            transition: transform 0.2s, border-color 0.2s, opacity 0.2s;
+            cursor: pointer;
+        }
+
+        /* Opacidade reduzida de forma sutil para usuários offline (padrão Project Z/Discord) */
+        .user-card.offline {
+            opacity: 0.6;
+        }
+        .user-card.offline:hover {
+            opacity: 0.9;
         }
 
         /* Destaque para o Card do Próprio Usuário Logado */
@@ -59,6 +70,7 @@
             border-left: 4px solid #ff5e00;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             cursor: default;
+            opacity: 1 !important;
         }
 
         .user-card:hover:not(.meu-perfil) {
@@ -77,16 +89,14 @@
             height: 42px;
             border-radius: 50%;
             background-color: #1d2024;
-            border: 2px solid #ff5e00;
+            border: 2px solid #7c848f;
             object-fit: cover;
+            transition: border-color 0.2s;
         }
 
-        .user-card.meu-perfil .explorer-avatar {
+        .user-card.meu-perfil .explorer-avatar,
+        .user-card.online .explorer-avatar {
             border-color: #ff5e00;
-        }
-
-        .user-card:not(.meu-perfil) .explorer-avatar {
-            border-color: #7c848f;
         }
 
         .explorer-info {
@@ -120,11 +130,20 @@
 
         /* Indicador de Bolinha Online */
         .explorer-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #23a55a;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .explorer-dot.is-online {
+            background-color: #23a55a;
             box-shadow: 0 0 8px #23a55a;
+        }
+        
+        .explorer-dot.is-offline {
+            background-color: #4f545c;
+            box-shadow: none;
         }
         
         .txt-lista-vazia {
@@ -154,12 +173,12 @@
                             <span class="explorer-status-text">Conectado ao ecossistema</span>
                         </div>
                     </div>
-                    <div class="explorer-dot"></div>
+                    <div class="explorer-dot is-online"></div>
                 </div>
 
-                <div class="explorer-title">Usuários Online</div>
+                <div class="explorer-title">Todos os Usuários do Servidor</div>
                 <div id="z-lista-usuarios-online">
-                    <p class="txt-lista-vazia">Buscando outros membros no multiverso...</p>
+                    <p class="txt-lista-vazia">Buscando os membros no banco de dados...</p>
                 </div>
 
             </div>
@@ -170,42 +189,34 @@
     function inicializarEscutasSocket() {
         if (!window.socket) return;
 
-        // Pede a lista atualizada imediatamente
-        window.socket.emit('pedir-salas'); 
+        // Solicita a lista global do servidor assim que carregar
+        window.socket.emit('pedir-usuarios-globais'); 
 
-        // Escuta principal: Evento direto de usuários online
-        window.socket.on('atualizar-usuarios-online', (listaUsuariosLogados) => {
-            if (Array.isArray(listaUsuariosLogados)) {
-                window.atualizarListaInterface(listaUsuariosLogados);
+        // Escuta principal: Evento que traz o status detalhado de todos os cadastrados
+        window.socket.on('atualizar-usuarios-globais', (listaMembrosMapeados) => {
+            console.log("👥 [User-Explorer] Lista global recebida:", listaMembrosMapeados);
+            if (Array.isArray(listaMembrosMapeados)) {
+                window.atualizarListaInterface(listaMembrosMapeados);
             }
         });
 
-        // Escuta secundária (Fallback): Extrai usuários ativos se o servidor mandar atualização de salas
-        window.socket.on('atualizar-salas', (dadosSalas) => {
-            if (dadosSalas && typeof dadosSalas === 'object') {
-                // Coleta de forma limpa todos os usernames trafegando pelos canais ativos
-                const usuariosExtraidos = new Set();
-                Object.values(dadosSalas).forEach(sala => {
-                    if (Array.isArray(sala.usuarios)) {
-                        sala.usuarios.forEach(u => usuariosExtraidos.add(u));
-                    }
-                });
-                if (usuariosExtraidos.size > 0) {
-                    window.atualizarListaInterface(Array.from(usuariosExtraidos));
-                }
-            }
-        });
-
-        // Atualiza a foto do próprio usuário caso mude no painel
+        // Caso o servidor sofra um broadcast de alteração de imagem, renova o pedido
         window.socket.on('foto-atualizada-sucesso', (dados) => {
-            if (dados && dados.username && dados.username.toLowerCase() === meuUsuario.toLowerCase()) {
-                const minhaFotoCard = document.getElementById('z-explorer-meu-avatar');
-                if (minhaFotoCard) minhaFotoCard.src = obterUrlAvatar(meuUsuario);
+            if (dados && dados.username) {
+                if (dados.username.toLowerCase() === meuUsuario.toLowerCase()) {
+                    const minhaFotoCard = document.getElementById('z-explorer-meu-avatar');
+                    if (minhaFotoCard) minhaFotoCard.src = obterUrlAvatar(meuUsuario);
+                }
+                window.socket.emit('pedir-usuarios-globais');
             }
+        });
+        
+        // Se houver reconexões ou atualizações de salas, atualiza os status
+        window.socket.on('atualizar-salas', () => {
+            window.socket.emit('pedir-usuarios-globais');
         });
     }
 
-    // Executa e define um pequeno intervalo de verificação caso a conexão com o Render demore um instante
     if (window.socket) {
         inicializarEscutasSocket();
     } else {
@@ -214,42 +225,50 @@
                 inicializarEscutasSocket();
                 clearInterval(checker);
             }
-        }, 1000);
+        }, 500);
     }
 
     /**
-     * Atualiza dinamicamente a UI com os dados reais recebidos do back-end
+     * Atualiza dinamicamente a UI mesclando membros online e offline
      */
-    window.atualizarListaInterface = function(usuariosOnline) {
+    window.atualizarListaInterface = function(usuariosGlobais) {
         const listaAlvo = document.getElementById('z-lista-usuarios-online');
         if (!listaAlvo) return;
 
-        // Filtra para remover você da lista de outros membros online abaixo
-        const filtrados = usuariosOnline.filter(u => u.toLowerCase() !== meuUsuario.toLowerCase());
+        // Remove você mesmo da listagem inferior para evitar redundância
+        const filtrados = usuariosGlobais.filter(u => u && u.username && u.username.toLowerCase() !== meuUsuario.toLowerCase());
 
         if (filtrados.length === 0) {
-            listaAlvo.innerHTML = `<p class="txt-lista-vazia">Nenhum outro usuário online no momento.</p>`;
+            listaAlvo.innerHTML = `<p class="txt-lista-vazia">Nenhum outro usuário registrado no banco.</p>`;
             return;
         }
 
-        listaAlvo.innerHTML = filtrados.map(user => `
-            <div class="user-card" onclick="irParaPerfilPreview('${user}')">
-                <div class="user-card-left">
-                    <img src="${obterUrlAvatar(user)}" class="explorer-avatar" alt="Avatar">
-                    <div class="explorer-info">
-                        <span class="explorer-username">@${user}</span>
-                        <span class="explorer-status-text">Disponível no app</span>
+        // Ordena para colocar os usuários Online no topo da lista
+        filtrados.sort((a, b) => (b.online === a.online) ? 0 : b.online ? 1 : -1);
+
+        // Renderização inteligente de cards baseado no status
+        listaAlvo.innerHTML = filtrados.map(user => {
+            const statusClasse = user.online ? 'online' : 'offline';
+            const dotClasse = user.online ? 'is-online' : 'is-offline';
+            const statusTexto = user.online ? 'Disponível no app' : 'Desconectado';
+
+            return `
+                <div class="user-card ${statusClasse}" onclick="irParaPerfilPreview('${user.username}')">
+                    <div class="user-card-left">
+                        <img src="${obterUrlAvatar(user.username)}" class="explorer-avatar" alt="Avatar">
+                        <div class="explorer-info">
+                            <span class="explorer-username">@${user.username}</span>
+                            <span class="explorer-status-text">${statusTexto}</span>
+                        </div>
                     </div>
+                    <div class="explorer-dot ${dotClasse}"></div>
                 </div>
-                <div class="explorer-dot"></div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     };
 
-    /**
-     * Guarda o alvo selecionado no cache local e navega para o preview do perfil
-     */
     window.irParaPerfilPreview = function(usernameAlvo) {
+        if (!usernameAlvo) return;
         console.log(`🎯 Abrindo visualização de: @${usernameAlvo}`);
         localStorage.setItem('zhub_preview_target', usernameAlvo);
         window.location.href = "preview-user.html";

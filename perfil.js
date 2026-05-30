@@ -1,21 +1,24 @@
 /**
- * Componente Modular 'Perfil' - Estilo Project Z
- * Gerencia a exibição dos dados da conta e alteração da foto de perfil.
+ * Componente Modular 'Perfil' - Estilo Project Z (Premium Dark & Neon)
+ * Gerencia a exibição dos dados da conta, biografia, badges e alteração da foto de perfil.
  */
 (function() {
     // 1. CARREGA DADOS DO USUÁRIO LOGADO
     const sessao = JSON.parse(localStorage.getItem('zhub_session_data') || '{}');
     const username = sessao.username || 'Membro Z';
     
-    // Recupera o ID real se ele já tiver sido salvo, caso contrário usa um placeholder temporário até o socket responder
+    // Recupera o ID real se ele já tiver sido salvo, caso contrário usa um placeholder temporário
     let idUsuario = sessao.id && !sessao.id.startsWith('id_0.') ? sessao.id : 'Carregando ID...';
 
     // Recupera a foto atual (seja Base64 carregada ou ID de avatar nativo)
     let fotoAtual = localStorage.getItem(`avatar_@${username.toLowerCase()}`) || 'avatar1';
     
+    // Recupera a bio salva ou define uma padrão
+    let bioAtual = localStorage.getItem(`bio_@${username.toLowerCase()}`) || 'Olá! Estou explorando o ecossistema modular do Z-Hub.';
+
     // Resolve a imagem inicial que deve ser exibida na tela
     function obterUrlFoto(valor) {
-        if (valor.startsWith('data:image')) return valor; // Imagem em Base64 vinda do dispositivo
+        if (valor && valor.startsWith('data:image')) return valor; // Imagem em Base64 vinda do dispositivo
         
         let seed = "Felix";
         if (valor === 'avatar2') seed = "Aneka";
@@ -27,48 +30,63 @@
     // 2. INJEÇÃO DOS ESTILOS CSS DO PERFIL
     const estiloCss = document.createElement('style');
     estiloCss.textContent = `
+        .perfil-wrapper-scroller {
+            width: 100%;
+            max-width: 520px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
         .perfil-container {
-            max-width: 500px;
-            margin: 40px auto;
-            padding: 24px;
-            background-color: #141619;
+            background-color: var(--z-gray-panel, #141619);
             border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.03);
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+            padding: 30px 24px;
+        }
+
+        /* Linha neon de design superior */
+        .perfil-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 5px;
+            background: linear-gradient(90deg, var(--z-orange-neon, #ff5e00), #ff8800);
         }
 
         /* Avatar com efeito de clique e hover */
         .perfil-avatar-wrapper {
             position: relative;
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 20px auto;
+            width: 115px;
+            height: 115px;
+            margin: 10px auto 16px auto;
             cursor: pointer;
         }
 
         .perfil-foto-exibicao {
-            width: 120px;
-            height: 120px;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
-            border: 3px solid #ff5e00;
-            background-color: #1d2024;
+            border: 3px solid var(--z-orange-neon, #ff5e00);
+            background-color: var(--z-gray-input, #1d2024);
             object-fit: cover;
-            transition: filter 0.2s;
+            transition: transform 0.2s, filter 0.2s;
+            box-shadow: 0 0 20px rgba(255, 94, 0, 0.2);
         }
 
         .perfil-avatar-wrapper:hover .perfil-foto-exibicao {
-            filter: brightness(0.5);
+            filter: brightness(0.4);
+            transform: scale(1.02);
         }
 
-        /* Ícone de câmera que aparece no hover */
         .perfil-avatar-overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             color: #ffffff;
-            font-size: 20px;
+            font-size: 22px;
             opacity: 0;
             transition: opacity 0.2s;
             pointer-events: none;
@@ -79,30 +97,117 @@
         }
 
         .perfil-nome {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 800;
-            color: #ffffff;
-            margin-bottom: 4px;
+            color: var(--z-text-white, #ffffff);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
         }
 
-        .perfil-id {
-            font-size: 13px;
-            font-weight: 600;
-            color: #7c848f;
-            background-color: #1d2024;
-            padding: 4px 12px;
+        /* Bloco do ID com clique para copiar */
+        .perfil-id-badge {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--z-text-gray, #7c848f);
+            background-color: var(--z-gray-input, #1d2024);
+            padding: 6px 14px;
             border-radius: 20px;
-            display: inline-block;
-            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.01);
         }
 
-        /* Modal / Janela Flutuante de Seleção de Foto */
+        .perfil-id-badge:hover {
+            background-color: rgba(255, 94, 0, 0.08);
+            color: var(--z-orange-neon, #ff5e00);
+        }
+
+        /* Painel de Badges/Conquistas */
+        .perfil-badges-section {
+            margin: 24px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .z-badge {
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .z-badge-dev { background-color: rgba(255, 94, 0, 0.1); color: #ff5e00; border: 1px solid rgba(255, 94, 0, 0.15); }
+        .z-badge-beta { background-color: rgba(0, 170, 255, 0.1); color: #00aaff; border: 1px solid rgba(0, 170, 255, 0.15); }
+
+        /* Área de Status/Bio Customizável */
+        .perfil-bio-box {
+            background-color: var(--z-gray-input, #1d2024);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: left;
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.01);
+        }
+
+        .perfil-bio-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--z-text-gray, #7c848f);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .perfil-bio-btn-editar {
+            background: transparent;
+            border: none;
+            color: var(--z-orange-neon, #ff5e00);
+            font-weight: 700;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .perfil-bio-text {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .perfil-bio-textarea {
+            width: 100%;
+            height: 65px;
+            background-color: #141619;
+            border: 1px solid rgba(255, 94, 0, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            padding: 8px;
+            font-size: 13.5px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+        }
+
+        /* Modal de Seleção de Foto */
         .z-modal-perfil {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: rgba(0, 0, 0, 0.85);
-            z-index: 100;
+            z-index: 1000;
             justify-content: center;
             align-items: center;
             padding: 20px;
@@ -111,97 +216,105 @@
         .z-modal-content {
             background-color: #141619;
             width: 100%;
-            max-width: 400px;
-            padding: 30px;
+            max-width: 380px;
+            padding: 24px;
             border-radius: 24px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center;
         }
 
         .z-modal-content h3 {
-            font-size: 18px;
-            margin-bottom: 20px;
+            font-size: 17px;
+            margin-bottom: 18px;
             color: #ffffff;
+            font-weight: 800;
         }
 
-        /* Grid de Opções do Site */
         .modal-avatar-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
         .modal-avatar-option {
             background-color: #1d2024;
-            padding: 8px;
+            padding: 6px;
             border-radius: 12px;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, transform 0.1s;
         }
 
         .modal-avatar-option:hover {
-            border-color: rgba(255, 94, 0, 0.5);
+            border-color: var(--z-orange-neon, #ff5e00);
+            transform: scale(1.05);
         }
 
         .modal-avatar-option img {
             width: 100%;
             height: auto;
+            border-radius: 50%;
         }
 
-        /* Linha Divisória */
         .modal-divisor {
             height: 1px;
-            background-color: rgba(255, 255, 255, 0.05);
-            margin: 20px 0;
+            background-color: rgba(255, 255, 255, 0.06);
+            margin: 16px 0;
         }
 
-        /* Botão Dispositivo */
         .btn-upload-local {
-            background-color: #ff5e00;
+            background-color: var(--z-orange-neon, #ff5e00);
             color: #ffffff;
             border: none;
-            padding: 12px 20px;
+            padding: 12px;
             border-radius: 12px;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 14px;
             cursor: pointer;
             width: 100%;
-            transition: background-color 0.2s;
+            transition: opacity 0.2s;
         }
 
-        .btn-upload-local:hover {
-            background-color: #e05200;
-        }
-
-        .btn-fechar-modal {
-            background: transparent;
-            color: #7c848f;
-            border: none;
-            margin-top: 15px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-        }
-        .btn-fechar-modal:hover {
-            color: #ffffff;
-        }
+        .btn-upload-local:hover { opacity: 0.9; }
+        .btn-fechar-modal { background: transparent; color: #7c848f; border: none; margin-top: 14px; cursor: pointer; font-weight: 700; font-size: 13px; }
+        .btn-fechar-modal:hover { color: #ffffff; }
     `;
     document.head.appendChild(estiloCss);
 
-    // 3. INJETA ESTRUTURA DO PERFIL E DO MODAL DE ESCOLHA
+    // 3. INJETA ESTRUTURA COMPLETA DO PERFIL
     const containerAlvo = document.getElementById('layout-user-explorer');
     if (containerAlvo) {
         containerAlvo.innerHTML = `
-            <div class="perfil-container">
-                <div class="perfil-avatar-wrapper" onclick="abrirSeletorFotos()">
-                    <img id="z-foto-perfil-tela" src="${obterUrlFoto(fotoAtual)}" class="perfil-foto-exibicao" alt="Foto">
-                    <div class="perfil-avatar-overlay">📸</div>
+            <div class="perfil-wrapper-scroller">
+                <div class="perfil-container">
+                    
+                    <div class="perfil-avatar-wrapper" onclick="abrirSeletorFotos()">
+                        <img id="z-foto-perfil-tela" src="${obterUrlFoto(fotoAtual)}" class="perfil-foto-exibicao" alt="Foto">
+                        <div class="perfil-avatar-overlay">📸</div>
+                    </div>
+                    
+                    <h2 class="perfil-nome">@${username}</h2>
+                    <div id="z-id-perfil-tela" class="perfil-id-badge" onclick="copiarIDUsuario()">
+                        <span>ID: ${idUsuario}</span> 📋
+                    </div>
+
+                    <div class="perfil-badges-section">
+                        <span class="z-badge z-badge-dev">🛠️ Desenvolvedor</span>
+                        <span class="z-badge z-badge-beta">🚀 Z-Beta Tester</span>
+                    </div>
+
+                    <div class="perfil-bio-box">
+                        <div class="perfil-bio-label">
+                            <span>Status / Biografia</span>
+                            <button id="z-bio-btn-acao" class="perfil-bio-btn-editar" onclick="alternarModoBio()">Editar</button>
+                        </div>
+                        <div id="z-bio-corpo">
+                            <p id="z-bio-texto-exibicao" class="perfil-bio-text"></p>
+                        </div>
+                    </div>
+
                 </div>
-                
-                <h2 class="perfil-nome">@${username}</h2>
-                <span id="z-id-perfil-tela" class="perfil-id">ID: ${idUsuario}</span>
             </div>
 
             <div id="z-modal-fotos" class="z-modal-perfil">
@@ -218,7 +331,7 @@
                     <div class="modal-divisor"></div>
 
                     <button class="btn-upload-local" onclick="document.getElementById('input-arquivo-oculto').click()">
-                        📁 Escolher arquivo do aparelho
+                        📁 Escolher do Aparelho
                     </button>
                     <input type="file" id="input-arquivo-oculto" accept="image/*" style="display: none;" onchange="processarFotoDispositivo(this)">
 
@@ -227,19 +340,57 @@
                 </div>
             </div>
         `;
+        
+        // Renderiza o texto inicial higienizado da Bio
+        document.getElementById('z-bio-texto-exibicao').innerText = bioAtual;
     }
 
-    // INTERCEPTADOR DE SEGURANÇA: Escuta a resposta do login silencioso do perfil.html para pegar o ID real do servidor
+    // 4. SISTEMA DE COPILAÇÃO DO ID
+    window.copiarIDUsuario = function() {
+        if (idUsuario.includes('...')) return;
+        navigator.clipboard.writeText(idUsuario).then(() => {
+            const badge = document.querySelector('.perfil-id-badge span');
+            const textoOriginal = badge.innerText;
+            badge.innerText = "Copiado com sucesso!";
+            setTimeout(() => { badge.innerText = textoOriginal; }, 1500);
+        });
+    };
+
+    // 5. INTERATIVIDADE DA BIOGRAFIA (Salvar/Editar sem travar)
+    let emModoEdicaoBio = false;
+    window.alternarModoBio = function() {
+        const corpoBio = document.getElementById('z-bio-corpo');
+        const btnAcao = document.getElementById('z-bio-btn-acao');
+
+        if (!emModoEdicaoBio) {
+            // Entra em modo de edição mudando para textarea
+            emModoEdicaoBio = true;
+            btnAcao.innerText = "Salvar";
+            corpoBio.innerHTML = `<textarea id="z-bio-input-campo" class="perfil-bio-textarea" maxlength="160"></textarea>`;
+            document.getElementById('z-bio-input-campo').value = bioAtual;
+            document.getElementById('z-bio-input-campo').focus();
+        } else {
+            // Sai do modo salvando as alterações
+            emModoEdicaoBio = false;
+            btnAcao.innerText = "Editar";
+            const textoDigitado = document.getElementById('z-bio-input-campo').value.trim() || 'Sem biografia.';
+            bioAtual = textoDigitado;
+            
+            // Grava localmente no repositório do usuário
+            localStorage.setItem(`bio_@${username.toLowerCase()}`, bioAtual);
+            corpoBio.innerHTML = `<p id="z-bio-texto-exibicao" class="perfil-bio-text"></p>`;
+            document.getElementById('z-bio-texto-exibicao').innerText = bioAtual;
+        }
+    };
+
+    // INTERCEPTADOR DE SEGURANÇA: Atualiza o ID em tempo real assim que o back-end autentica
     if (window.socket) {
         window.socket.on('login-sucesso', (dadosBackEnd) => {
             if (dadosBackEnd && dadosBackEnd.id) {
                 idUsuario = dadosBackEnd.id;
-                
-                // Atualiza visualmente na tela o ID verdadeiro vindo do banco do server.js
                 const tagIdElemento = document.getElementById('z-id-perfil-tela');
-                if (tagIdElemento) tagIdElemento.innerText = `ID: ${idUsuario}`;
+                if (tagIdElemento) tagIdElemento.querySelector('span').innerText = `ID: ${idUsuario}`;
 
-                // Corrige o cache local salvando o ID definitivo nele também
                 const dadosSessaoAtualizados = JSON.parse(localStorage.getItem('zhub_session_data') || '{}');
                 dadosSessaoAtualizados.id = idUsuario;
                 localStorage.setItem('zhub_session_data', JSON.stringify(dadosSessaoAtualizados));
@@ -247,43 +398,30 @@
         });
     }
 
-    // 4. FUNÇÕES INTERNAS DE CONTROLE DE INTERFACE
-    window.abrirSeletorFotos = function() {
-        document.getElementById('z-modal-fotos').style.display = 'flex';
-    };
+    // 6. FUNÇÕES DO SELETOR DE IMAGENS
+    window.abrirSeletorFotos = function() { document.getElementById('z-modal-fotos').style.display = 'flex'; };
+    window.fecharSeletorFotos = function() { document.getElementById('z-modal-fotos').style.display = 'none'; };
 
-    window.fecharSeletorFotos = function() {
-        document.getElementById('z-modal-fotos').style.display = 'none';
-    };
-
-    // 5. TRATAMENTO DE IMAGEM DO DISPOSITIVO (Transforma em Base64 limpo)
     window.processarFotoDispositivo = function(input) {
         if (input.files && input.files[0]) {
             const leitor = new FileReader();
             leitor.onload = function(e) {
-                const imagemBase64 = e.target.result;
-                salvarFotoPerfil(imagemBase64); // Salva o Base64 gerado
+                salvarFotoPerfil(e.target.result);
             };
             leitor.readAsDataURL(input.files[0]);
         }
     };
 
-    // 6. PERSISTÊNCIA AUTOMÁTICA E ENVIO PARA O SALVAMENTO
     window.salvarFotoPerfil = function(novoValor) {
-        // Atualiza a imagem imediatamente na tela principal e na Topbar da barra.js
         const urlResolvida = obterUrlFoto(novoValor);
         document.getElementById('z-foto-perfil-tela').src = urlResolvida;
         
         const topbarAvatar = document.querySelector('.z-user-avatar');
         if (topbarAvatar) topbarAvatar.src = urlResolvida;
 
-        // Salva localmente no repositório de avatares do usuário em formato textual ou base64
         localStorage.setItem(`avatar_@${username.toLowerCase()}`, novoValor);
-        
         fecharSeletorFotos();
-        console.log("💾 Foto de perfil atualizada localmente.");
 
-        // Despacha os dados atualizados de forma limpa para o save-conta.js
         if (typeof window.despacharParaSaveConta === "function") {
             window.despacharParaSaveConta({
                 username: username,
@@ -292,5 +430,4 @@
             });
         }
     };
-
 })();

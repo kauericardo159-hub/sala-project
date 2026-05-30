@@ -11,6 +11,7 @@ app.use(express.static(__dirname));
 
 const server = require('http').Server(app);
 const io = require('socket.io')(server, {
+    maxHttpBufferSize: 5e7, // PROTEÇÃO: Eleva o limite máximo do socket para 50MB (suporta avatares Base64 grandes)
     cors: {
         // Origens travadas estritamente para o seu ecossistema de deploy, GitHub e testes locais
         origin: [
@@ -72,6 +73,9 @@ io.on('connection', (socket) => {
         BancoDeDados.salvarUsuario(userTratado, { id: novoId, senha: senha, avatar: "avatar1" });
 
         socket.emit('cadastro-sucesso', { username: username.trim(), id: novoId });
+        
+        // Notifica a rede para incluir o novo usuário na listagem (como offline inicialmente)
+        notificarUsuariosGlobaisMapeados();
     });
 
     // Evento de Login de usuário existente (Manual ou Automático via Cookie/Storage)
@@ -96,8 +100,17 @@ io.on('connection', (socket) => {
             avatar: conta.avatar || "avatar1"
         });
 
-        // Alerta o componente user-explorer.js de todos que a lista mudou
+        // Alerta todos os componentes user-explorer.js sobre a mudança de status
         notificarUsuariosOnlineGlobais();
+        notificarUsuariosGlobaisMapeados();
+    });
+
+    // ==========================================================================
+    // ESCUTA DE LISTAGEM RICA (ONLINE + OFFLINE COMBINADOS)
+    // ==========================================================================
+    socket.on('pedir-usuarios-globais', () => {
+        // Envia a lista mapeada especificamente para quem solicitou
+        socket.emit('atualizar-usuarios-globais', obterListaMapeadaOnlineOffline());
     });
 
     // ==========================================================================
@@ -114,27 +127,29 @@ io.on('connection', (socket) => {
             usuariosCadastrados[userTratado].avatar = dados.avatar;
             if (dados.id) usuariosCadastrados[userTratado].id = dados.id;
 
-            // Força a gravação física direta no arquivo de persistência 'usuarios.json'
-            try {
-                fs.writeFileSync(
-                    path.join(__dirname, 'usuarios.json'), 
-                    JSON.stringify(usuariosCadastrados, null, 2), 
-                    'utf-8'
-                );
-                
-                // CORRIGIDO: Agora devolve o pacote completo com o avatar para o cache do save-conta.js
-                io.emit('foto-atualizada-sucesso', { 
-                    username: usuariosCadastrados[userTratado].username,
-                    avatar: usuariosCadastrados[userTratado].avatar 
-                });
-                
-                // Repassa uma ordem de recarregamento para manter avatares sincronizados no lobby e chat
-                io.emit('atualizar-salas');
-                notificarUsuariosOnlineGlobais();
-            } catch (err) {
-                console.error("🔴 Falha ao gravar usuarios.json:", err);
-                socket.emit('erro', 'Não foi possível salvar as alterações no banco remoto.');
-            }
+            // CORREÇÃO ASSÍNCRONA RESILIENTE: Impede gargalos no Render causados por arquivos pesados
+            fs.writeFile(
+                path.join(__dirname, 'usuarios.json'), 
+                JSON.stringify(usuariosCadastrados, null, 2), 
+                'utf-8',
+                (err) => {
+                    if (err) {
+                        console.error("🔴 Falha ao gravar usuarios.json de forma assíncrona:", err);
+                        return socket.emit('erro', 'Não foi possível salvar as alterações no banco remoto.');
+                    }
+
+                    // Devolve uma confirmação de gravação limpa com o avatar atualizado para sincronização de cache
+                    io.emit('foto-atualizada-sucesso', { 
+                        username: usuariosCadastrados[userTratado].username,
+                        avatar: usuariosCadastrados[userTratado].avatar 
+                    });
+                    
+                    // Repassa uma ordem de recarregamento para manter avatares sincronizados no lobby e chat
+                    io.emit('atualizar-salas');
+                    notificarUsuariosOnlineGlobais();
+                    notificarUsuariosGlobaisMapeados();
+                }
+            );
         }
     });
 
@@ -202,7 +217,8 @@ io.on('connection', (socket) => {
 
         socket.join(roomId);
 
-        // CORREÇÃO SUPORTE PRIVADO: Se for um canal de voz real cadastrado, gerencia os participantes
+        // SUPORTE HÍBRIDO: Se for um canal de voz real cadastrado, gerencia os participantes. 
+        // Se for sala dinâmica de DM de texto, ignora o bloco de áudio mas permite o join acima.
         if (salasExistentes[roomId]) {
             if (!salasExistentes[roomId].usuarios.includes(userId)) {
                 salasExistentes[roomId].usuarios.push(userId);
@@ -232,15 +248,41 @@ io.on('connection', (socket) => {
         if (meuUsuarioLogado) {
             usuariosOnlineGlobais.delete(meuUsuarioLogado);
             notificarUsuariosOnlineGlobais();
+            notificarUsuariosGlobaisMapeados(); // Garante que a bolinha dele mude para cinza para todos instantaneamente
         }
     });
 });
 
 /**
- * Despacha em tempo real para todos os navegadores a lista de strings com nomes online
+ * Despacha em tempo real para todos os navegadores a lista antiga de strings online (Legado/Retrocompatibilidade)
  */
 function notificarUsuariosOnlineGlobais() {
     io.emit('atualizar-usuarios-online', Array.from(usuariosOnlineGlobais));
+}
+
+/**
+ * Puxa as contas registradas e mapeia o estado atual de conexão de cada uma delas
+ * @returns {Array} Coleção contendo objetos { username, online }
+ */
+function obtenerListaMapeadaOnlineOffline() {
+    // Puxa o estado atual dos usuários salvos fisicamente
+    const contasCadastradas = BancoDeDados.obterTodosUsuarios() || {};
+    
+    return Object.values(contasCadastradas).map(conta => {
+        // Confere se o nome original salvo possui correspondência no Set de usuários ativos
+        const estaOnline = usuariosOnlineGlobais.has(conta.username);
+        return {
+            username: conta.username,
+            online: estaOnline
+        };
+    });
+}
+
+/**
+ * Faz um broadcast da lista rica mista (Online/Offline) para todos os clientes conectados
+ */
+function notificarUsuariosGlobaisMapeados() {
+    io.emit('atualizar-usuarios-globais', obtenerListaMapeadaOnlineOffline());
 }
 
 /**

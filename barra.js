@@ -1,6 +1,6 @@
 /**
  * Componente Modular 'Barra' - Estilo Project Z (Premium Dark & Orange)
- * Injeta dinamicamente a Topbar, Sidebar e o CSS unificado.
+ * Injeta dinamicamente a Topbar, Sidebar e o CSS unificado de forma resiliente.
  */
 (function() {
     // 1. CARREGA DADOS DO USUÁRIO LOGADO (Recuperados do localStorage)
@@ -12,6 +12,7 @@
     
     // Função auxiliar para resolver a URL real da imagem (Suporta SVG do Dicebear e imagens locais em Base64)
     function resolverUrlFoto(valor) {
+        if (!valor) return `https://api.dicebear.com/7.x/bottts/svg?seed=Felix`;
         if (valor.startsWith('data:image')) return valor; // Imagem customizada em Base64 do dispositivo
         
         let seedAvatar = "Felix";
@@ -21,8 +22,9 @@
         return `https://api.dicebear.com/7.x/bottts/svg?seed=${seedAvatar}`;
     }
 
-    // Descobre qual é a página atual olhando o final da URL
-    const paginaAtual = window.location.pathname.split("/").pop() || "index.html";
+    // Descobre qual é a página atual olhando o final da URL (Tratado contra parâmetros e rotas secundárias)
+    const urlCaminho = window.location.pathname.split("/").pop() || "index.html";
+    const paginaAtual = urlCaminho.includes('.html') ? urlCaminho : 'index.html';
 
     // 2. INJEÇÃO DO ESTILO CSS ISOLADO (Laranja & Preto Carbono)
     const estiloCss = document.createElement('style');
@@ -37,13 +39,14 @@
             --z-text-gray: #7c848f;
         }
 
-        /* Estrutura do Layout Grid Pai */
+        /* Estrutura Travada do Layout Viewport para impedir quebras visuais */
         #app-viewport {
-            display: flex;
-            flex-direction: column;
+            display: flex !important; /* Força o alinhamento correto */
+            flex-direction: column !important;
             width: 100vw;
             height: 100vh;
             background-color: var(--z-black-pure);
+            overflow: hidden !important;
         }
 
         /* Barra Superior (Header) */
@@ -57,7 +60,8 @@
             padding: 0 24px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-            z-index: 10;
+            z-index: 100;
+            flex-shrink: 0; /* Impede que a topbar seja esmagada */
         }
 
         .z-topbar-left {
@@ -65,6 +69,7 @@
             align-items: center;
             gap: 12px;
             cursor: pointer;
+            user-select: none;
         }
 
         .z-logo-badge {
@@ -99,6 +104,7 @@
             border: 1px solid rgba(255, 255, 255, 0.02);
             cursor: pointer;
             transition: border-color 0.2s;
+            user-select: none;
         }
 
         .z-topbar-right:hover {
@@ -134,36 +140,31 @@
             font-weight: 600;
         }
 
-        /* Container Principal Inferior */
-        .z-main-content-wrapper {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: calc(100vh - 70px);
-            overflow: hidden;
-        }
-
-        /* Visualização da Área do Explorer */
+        /* Otimização Crítica do Painel de Conteúdo Intermediário */
         #layout-user-explorer {
-            flex-grow: 1;
-            overflow-y: auto;
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
             padding: 20px;
+            width: 100%;
         }
 
-        /* Barra Inferior de Navegação (Menu de Botões) */
+        /* Barra Inferior de Navegação Estabilizada (Footer Fixo na Base) */
         .z-navbar-footer {
             width: 100%;
+            height: 75px;
             background-color: var(--z-gray-panel);
-            padding: 16px 24px;
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 12px;
+            padding: 0 24px;
             border-top: 1px solid rgba(255, 255, 255, 0.03);
             box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            flex-shrink: 0; /* NUNCA deixa a barra sumir ou encolher para 0 */
         }
 
-        /* Estilização dos Botões Estilo Project Z */
+        /* Botões Estilo Project Z */
         .z-nav-btn {
             background-color: var(--z-gray-input);
             color: var(--z-text-gray);
@@ -173,7 +174,7 @@
             font-size: 13.5px;
             font-weight: 700;
             cursor: pointer;
-            transition: transform 0.1s ease, background-color 0.2s, color 0.2s;
+            transition: transform 0.1s ease, background-color 0.2s, color 0.2s, border-color 0.2s;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -196,24 +197,29 @@
             transform: scale(0.96);
         }
 
-        /* Responsividade para telas menores */
+        /* Responsividade Mobile Fluida */
         @media (max-width: 480px) {
             .z-navbar-footer {
-                padding: 12px 10px;
-                gap: 6px;
+                padding: 0 8px;
+                gap: 4px;
+                height: 65px;
             }
             .z-nav-btn {
-                padding: 10px 12px;
-                font-size: 12px;
+                padding: 10px 10px;
+                font-size: 11.5px;
                 border-radius: 10px;
+                gap: 4px;
             }
         }
     `;
     document.head.appendChild(estiloCss);
 
-    // 3. ESTRUTURAÇÃO DO HTML DINÂMICO
+    // 3. ESTRUTURAÇÃO DO HTML DINÂMICO SEM QUEBRAR O DOM ORIGINAL
     const containerBarra = document.getElementById('layout-barra-lateral');
-    if (containerBarra) {
+    const viewport = document.getElementById('app-viewport');
+
+    if (containerBarra && viewport) {
+        // Injeta a Topbar no seu local correto
         containerBarra.innerHTML = `
             <header class="z-topbar">
                 <div class="z-topbar-left" onclick="navegarZHub('index.html')">
@@ -231,16 +237,13 @@
             </header>
         `;
         
-        const viewport = document.getElementById('app-viewport');
-        const wrapper = document.createElement('div');
-        wrapper.className = "z-main-content-wrapper";
-        
-        const explorer = document.getElementById('layout-user-explorer');
-        viewport.appendChild(wrapper);
-        wrapper.appendChild(explorer);
+        // CORREÇÃO IMUTÁVEL: Remove o footer antigo se ele já existir por re-renderização
+        const footerAntigo = document.getElementById('z-global-footer-nav');
+        if (footerAntigo) footerAntigo.remove();
 
-        // Injeta a barra com as 4 rotas físicas do ecossistema e marca o botão ativo baseado na URL
+        // Cria o Menu Inferior Permanente acoplado direto na raiz do viewport flexbox
         const footerNav = document.createElement('footer');
+        footerNav.id = "z-global-footer-nav";
         footerNav.className = "z-navbar-footer";
         footerNav.innerHTML = `
             <button class="z-nav-btn ${paginaAtual === 'index.html' ? 'active' : ''}" onclick="navegarZHub('index.html')">🏠 Início</button>
@@ -248,11 +251,15 @@
             <button class="z-nav-btn ${paginaAtual === 'chat.html' ? 'active' : ''}" onclick="navegarZHub('chat.html')">🔊 Chat & Call</button>
             <button class="z-nav-btn ${paginaAtual === 'perfil.html' ? 'active' : ''}" onclick="navegarZHub('perfil.html')">👤 Perfil</button>
         `;
-        wrapper.appendChild(footerNav);
+        
+        // Empurra o footer para o final absoluto do contêiner pai
+        viewport.appendChild(footerNav);
     }
 
-    // INTERCEPTADOR: Sincroniza o avatar caso o login de validação retorne uma foto diferente do back-end
-    if (window.socket) {
+    // 4. PROTOCOLOS DE ESCUTA EM TEMPO REAL (Evita loops e concorrência)
+    function escutarAtualizacoesDeSessao() {
+        if (!window.socket) return;
+
         window.socket.on('login-sucesso', (dadosBackEnd) => {
             if (dadosBackEnd && dadosBackEnd.avatar) {
                 const imgHeader = document.getElementById('z-header-avatar');
@@ -262,12 +269,24 @@
             }
         });
     }
+
+    if (window.socket) {
+        escutarAtualizacoesDeSessao();
+    } else {
+        const checker = setInterval(() => {
+            if (window.socket) {
+                escutarAtualizacoesDeSessao();
+                clearInterval(checker);
+            }
+        }, 300);
+    }
 })();
 
 /**
- * Roteador físico do ecossistema do site para trocar de páginas de verdade
+ * Roteador físico do ecossistema para troca real de páginas
  */
 function navegarZHub(arquivoDestino) {
+    if (!arquivoDestino) return;
     console.log(`🚀 Navegando para a página: ${arquivoDestino}`);
     window.location.href = arquivoDestino;
 }

@@ -10,9 +10,7 @@
 
     <main id="app-viewport" style="display: none;">
         <div id="layout-barra-lateral"></div>
-        
-        <div id="layout-user-explorer">
-            </div>
+        <div id="layout-user-explorer"></div>
     </main>
 
     <div id="z-core-loader" class="loader-wrapper">
@@ -24,7 +22,15 @@
     
     <script>
         const urlServidor = "https://sala-project.onrender.com";
-        const socket = io(urlServidor, { transports: ['websocket', 'polling'] });
+        // Configuração de transporte otimizada para evitar timeouts no Render
+        const socket = io(urlServidor, { 
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            rememberUpgrade: true
+        });
+
+        // Expondo o socket globalmente para ser lido pelos scripts modulares
+        window.socket = socket;
 
         // Trava de Segurança: Se não existir sessão ativa, chuta o usuário direto pro login.html
         const sessaoAtiva = localStorage.getItem('zhub_session_data');
@@ -35,7 +41,7 @@
         socket.on('connect', () => {
             try {
                 const dados = JSON.parse(sessaoAtiva);
-                // Autentica silenciosamente para liberar o carregamento da página
+                // Autentica silenciosamente para liberar o carregamento seguro da página
                 socket.emit('login-usuario', { username: dados.username, senha: dados.senha });
             } catch(e) {
                 localStorage.removeItem('zhub_session_data');
@@ -51,7 +57,8 @@
             document.getElementById('app-viewport').style.display = 'flex';
         });
 
-        socket.on('erro', () => {
+        socket.on('erro', (msg) => {
+            console.warn("⚠️ Falha na validação automática de sessão:", msg);
             // Se as credenciais salvas expirarem ou derem erro, limpa o lixo e manda pro login
             localStorage.removeItem('zhub_session_data');
             window.location.href = "login.html";
@@ -59,6 +66,6 @@
     </script>
 
     <script src="barra.js"></script>
-      <script src="perfil.js"></script>
+    <script src="save-conta.js"></script> <script src="perfil.js"></script>
 </body>
 </html>

@@ -29,20 +29,20 @@ const BancoDeDados = {
     // ==========================================================================
     
     /**
-     * Retorna todas as contas registradas no sistema
+     * Retorna todas as contas registradas no sistema (Leitura rápida)
      */
     obterTodosUsuarios: () => {
         try { 
             const conteudo = fs.readFileSync(arquivoUsuarios, 'utf-8');
             return JSON.parse(conteudo) || {}; 
         } catch (e) { 
-            console.warn("⚠️ Falha na leitura de usuarios.json, redefinindo cache local.");
+            console.warn("⚠️ Falha na leitura de salas.json, redefinindo cache local.");
             return {}; 
         }
     },
 
     /**
-     * Registra ou atualiza um usuário permanentemente no arquivo usuarios.json
+     * Registra ou atualiza um usuário permanentemente de forma ASSÍNCRONA no arquivo usuarios.json
      */
     salvarUsuario: (userTratado, dadosUsuario) => {
         const usuarios = BancoDeDados.obterTodosUsuarios();
@@ -58,11 +58,14 @@ const BancoDeDados = {
             avatar: dadosUsuario.avatar || usuarioExistente.avatar || "avatar1"
         };
         
-        try {
-            fs.writeFileSync(arquivoUsuarios, JSON.stringify(usuarios, null, 2), 'utf-8');
-        } catch (erro) {
-            console.error("🔴 Falha ao persistir novos usuários no disco:", erro);
-        }
+        // CORREÇÃO: Escrita não-bloqueante evita corromper o arquivo com dados grandes (Base64)
+        fs.writeFile(arquivoUsuarios, JSON.stringify(usuarios, null, 2), 'utf-8', (erro) => {
+            if (erro) {
+                console.error("🔴 Falha assíncrona ao persistir novos usuários no disco:", erro);
+            } else {
+                console.log(`💾 [Bancos] Usuário @${userTratado} gravado fisicamente com sucesso.`);
+            }
+        });
     },
 
     // ==========================================================================
@@ -83,7 +86,7 @@ const BancoDeDados = {
     },
 
     /**
-     * Registra uma nova sala no repositório local
+     * Registra uma nova sala de forma ASSÍNCRONA no repositório local
      */
     salvarSala: (idSala, dadosSala) => {
         const salas = BancoDeDados.obterTodasSalas();
@@ -95,11 +98,12 @@ const BancoDeDados = {
             usuarios: [] // Força inicialização com 0 participantes ativos de forma segura
         };
         
-        try {
-            fs.writeFileSync(arquivoSalas, JSON.stringify(salas, null, 2), 'utf-8');
-        } catch (erro) {
-            console.error("🔴 Falha ao persistir a criação de canais no disco:", erro);
-        }
+        // CORREÇÃO: Escrita não-bloqueante para gerenciamento leve de salas
+        fs.writeFile(arquivoSalas, JSON.stringify(salas, null, 2), 'utf-8', (erro) => {
+            if (erro) {
+                console.error("🔴 Falha assíncrona ao persistir a criação de canais no disco:", erro);
+            }
+        });
     }
 };
 

@@ -1,7 +1,7 @@
 {
   "name": "sala-project",
-  "version": "1.4.0",
-  "description": "Mini Discord Clone com Chamadas de Áudio Otimizadas e WebRTC Permanente",
+  "version": "1.5.0",
+  "description": "Mini Discord Clone com Chamadas de Áudio Otimizadas, Persistência Resiliente e WebRTC Permanente",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -20,17 +20,19 @@
     "webrtc",
     "socketio",
     "render",
-    "audio-chat"
+    "audio-chat",
+    "persistence"
   ],
   "author": "Kauan Ricardo",
   "license": "MIT",
   "dependencies": {
-    "compression": "^1.7.4",
-    "express": "^4.19.2",
-    "socket.io": "^4.7.5"
+    "body-parser": "^1.20.3",
+    "compression": "^1.7.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.7"
   },
   "engines": {
     "node": ">=18.0.0"
