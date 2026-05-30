@@ -3,177 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sala Project — Alpha Version</title>
+    <title>Sala Project — Pro Version</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="app-wrapper">
-
-        <div id="screen-login" class="auth-card" style="display: none;">
-            <div class="auth-header">
+    <div id="screen-login" class="screen" style="display: flex;">
+        <div class="auth-container">
+            <div style="text-align: center; margin-bottom: 20px;">
                 <h2>Sala Project</h2>
-                <p id="auth-subtitle">De volta ao ecossistema? Faça seu login.</p>
+                <p id="auth-subtitle" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">
+                    De volta ao ecossistema? Faça seu login.
+                </p>
             </div>
 
             <div class="auth-tabs">
-                <button id="tab-login" class="tab-btn active">Entrar</button>
-                <button id="tab-register" class="tab-btn">Criar Conta</button>
+                <button id="tab-login" class="active">Entrar</button>
+                <button id="tab-register">Criar Conta</button>
             </div>
 
-            <div class="auth-form-container">
-                <div class="input-group">
-                    <label for="login-username">Seu @username (Apenas letras minúsculas)</label>
-                    <div class="input-wrapper">
-                        <span class="input-prefix">@</span>
-                        <input type="text" id="login-username" placeholder="usuario" autocomplete="off">
-                    </div>
-                </div>
-
-                <div class="input-group" id="group-displayname" style="display: none;">
-                    <label for="login-displayname">Nome de Exibição (Como os outros te veem)</label>
-                    <input type="text" id="login-displayname" placeholder="Ex: Kauê Ricardo">
-                </div>
-
-                <div class="input-group">
-                    <label for="login-password">Sua Senha</label>
-                    <input type="password" id="login-password" placeholder="••••••••">
-                </div>
-
-                <button id="btn-auth-submit" class="btn-primary full-width">
-                    Entrar com Segurança
-                </button>
+            <div class="input-group">
+                <label for="login-username">Seu @username (Minúsculo, sem espaços)</label>
+                <input type="text" id="login-username" placeholder="@usuario" autocomplete="off">
             </div>
-        </div>
 
-        <div id="screen-home" class="dashboard-layout" style="display: none;">
+            <div class="input-group" id="group-displayname" style="display: none;">
+                <label for="login-displayname">Nome de Exibição</label>
+                <input type="text" id="login-displayname" placeholder="Ex: Kauê Ricardo">
+            </div>
+
+            <div class="input-group">
+                <label for="login-password">Sua Senha</label>
+                <input type="password" id="login-password" placeholder="••••••••">
+            </div>
+
+            <button id="btn-auth-submit" class="btn-primary">Entrar com Segurança</button>
+        </div>
+    </div>
+
+    <div id="screen-dashboard" class="screen">
+        
+        <aside class="sidebar">
+            <div class="profile-card">
+                <label for="avatar-input" style="cursor: pointer;" title="Clique para trocar a foto">
+                    <img id="sidebar-avatar" src="user-photo.jpg" alt="Seu Avatar">
+                </label>
+                <input type="file" id="avatar-input" accept="image/*" style="display: none;">
+                
+                <div style="display: flex; flex-direction: column;">
+                    <strong id="sidebar-user-name">Carregando...</strong>
+                    <span id="sidebar-user-tag" style="font-size: 0.8rem; color: var(--text-muted);">@user#0000</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; flex-grow: 1;">
+                <h4 style="margin-bottom: 15px; color: var(--text-muted);">Criar Nova Sala</h4>
+                
+                <div class="input-group">
+                    <label>Nome da Sala</label>
+                    <input type="text" id="room-name" placeholder="Ex: Call da Madrugada">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Tipo</label>
+                        <select id="room-type" style="width: 100%;">
+                            <option value="public">Pública</option>
+                            <option value="private">Privada</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; margin-bottom: 5px; display: block;">Limite</label>
+                        <input type="number" id="room-limit" value="8" min="2" max="50" style="width: 100%;">
+                    </div>
+                </div>
+
+                <div class="input-group" id="group-room-password" style="display: none;">
+                    <label>Senha de Acesso</label>
+                    <input type="password" id="room-password" placeholder="Defina a senha">
+                </div>
+
+                <button id="btn-create-room" class="btn-primary" style="margin-top: 10px;">Lançar Sala</button>
+            </div>
+
+            <button id="btn-logout" style="color: var(--status-offline); margin-top: 20px; text-align: left; font-weight: bold;">
+                Sair da Conta
+            </button>
+        </aside>
+
+        <main class="main-feed">
+            <h2 style="margin-bottom: 5px;">Salas Disponíveis</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Participe de conversas por voz e texto em tempo real.</p>
             
-            <aside class="sidebar-user">
-                <div class="user-profile-widget">
-                    <div class="avatar-edit-container">
-                        <img id="avatar-preview" src="user-photo.jpg" alt="Sua Foto" class="user-main-avatar">
-                        <label for="avatar-input" class="avatar-hover-trigger" title="Alterar foto de perfil">
-                            <span>Alterar</span>
-                        </label>
-                        <input type="file" id="avatar-input" accept="image/*">
-                    </div>
-                    <div class="user-meta">
-                        <h3 id="sidebar-display-name">Carregando...</h3>
-                        <span id="user-uid" class="user-tag-badge">@username</span>
-                    </div>
+            <div id="rooms-feed">
                 </div>
+        </main>
 
-                <div class="config-panel">
-                    <h4>Gerenciar Perfil</h4>
-                    <div class="input-group">
-                        <label>Alterar Nome de Exibição</label>
-                        <div class="inline-action-input">
-                            <input type="text" id="profile-display-name" placeholder="Novo nome...">
-                            <button id="btn-save-profile-name" class="btn-success icon-btn" title="Salvar Novo Nome">💾</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="config-panel room-builder">
-                    <h4>Criar Nova Sala</h4>
-                    
-                    <div class="input-group">
-                        <label>Nome da Sala</label>
-                        <input type="text" id="room-name-input" placeholder="Ex: Call do Campeonato">
-                    </div>
-
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label>Privacidade</label>
-                            <select id="room-type-select">
-                                <option value="public">Pública 🔓</option>
-                                <option value="private">Privada 🔒</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Limite</label>
-                            <input type="number" id="room-limit-input" value="8" min="2" max="50">
-                        </div>
-                    </div>
-
-                    <div class="input-group" id="room-password-container" style="display: none;">
-                        <label>Senha de Acesso</label>
-                        <input type="password" id="room-password-input" placeholder="Defina a senha da sala">
-                    </div>
-
-                    <button id="btn-create-room-submit" class="btn-primary full-width" style="margin-top: 10px;">
-                        🚀 Lançar Sala de Voz
-                    </button>
-                </div>
-
-                <button id="btn-logout" class="btn-danger-text full-width">Desconectar da Conta</button>
-            </aside>
-
-            <main class="main-rooms-feed">
-                <header class="feed-header">
-                    <div class="feed-title">
-                        <h2>Salas Disponíveis</h2>
-                        <p>Participe de conversas por voz e texto em tempo real.</p>
-                    </div>
-                    <div class="live-status-indicator">
-                        <span class="pulse-dot"></span> Ao Vivo
-                    </div>
-                </header>
-
-                <div id="rooms-live-list" class="rooms-grid-container"></div>
-            </main>
-        </div>
-
-        <div id="screen-room" class="room-layout" style="display: none;">
+        <aside class="friends-panel">
+            <h3 style="margin-bottom: 15px;">Amigos (<span id="friends-online-count">0</span>)</h3>
             
-            <section class="voice-workspace">
-                <header class="room-workspace-header">
-                    <div class="room-identity">
-                        <span class="hash-tag">#</span>
-                        <h2 id="room-title">Nome da Sala</h2>
-                    </div>
-                    <div class="room-action-controls">
-                        <div id="owner-controls" style="display: none;">
-                            <button id="btn-delete-room" class="btn-danger outline">👑 Fechar Sala</button>
-                        </div>
-                        <button id="btn-leave-room-top" class="btn-danger room-leave-trigger">Sair da Sala</button>
-                    </div>
-                </header>
+            <div style="display: flex; gap: 5px; margin-bottom: 20px;">
+                <input type="text" id="input-friend-uid" placeholder="@user#0000" style="flex-grow: 1;">
+                <button id="btn-send-friend-request" class="btn-primary" style="padding: 10px;">➕</button>
+            </div>
 
-                <div id="voice-cards-container" class="voice-subscribers-grid"></div>
+            <div style="margin-bottom: 20px;">
+                <h4 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+                    Convites Pendentes <span id="friend-requests-badge" style="display:none; background: var(--brand-primary); color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem;">0</span>
+                </h4>
+                <div id="friend-requests-container"></div>
+            </div>
 
-                <footer class="voice-dock-controls">
-                    <button id="btn-mic" class="btn-success status-dock-btn">
-                        🎙️ Microfone Ativo
+            <div style="flex-grow: 1; overflow-y: auto;">
+                <h4 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Meus Amigos</h4>
+                <div id="friends-list-container"></div>
+            </div>
+        </aside>
+    </div>
+
+    <div id="screen-room" class="screen">
+        
+        <section class="voice-area">
+            <div class="room-header">
+                <div>
+                    <span style="color: var(--brand-primary); font-weight: bold; margin-right: 5px;">#</span>
+                    <h2 id="room-title" style="display: inline;">Nome da Sala</h2>
+                </div>
+                <div>
+                    <button id="btn-mute" class="btn-primary" style="background-color: var(--bg-surface-hover); margin-right: 10px;">
+                        Ligar Microfone
                     </button>
-                    <button id="btn-leave-room-dock" class="btn-danger status-dock-btn room-leave-trigger">
-                        🔇 Desconectar Call
+                    <button id="btn-leave-room" class="btn-primary" style="background-color: var(--status-offline);">
+                        Sair da Sala
                     </button>
-                </footer>
-            </section>
+                </div>
+            </div>
 
-            <section class="text-workspace">
-                <div class="workspace-chat-header">
-                    <h3>Bate-papo de Texto</h3>
+            <div id="voice-subscribers-grid">
+                </div>
+        </section>
+
+        <section class="chat-area">
+            <div style="padding: 15px; border-bottom: 1px solid var(--bg-base); font-weight: bold;">
+                Bate-papo da Sala
+            </div>
+            
+            <div id="chat-messages-container">
                 </div>
 
-                <div id="chat-area" class="chat-viewport"></div>
-
-                <footer class="chat-input-wrapper">
-                    <button id="btn-chat-media-mock" class="chat-addon-btn" title="Enviar arquivos de mídia">
-                        ➕
-                    </button>
-                    <input type="text" id="chat-input" placeholder="Conversar com a sala...">
-                    <button id="btn-chat-send" class="chat-send-btn">Enviar</button>
-                </footer>
-            </section>
-
-        </div>
-
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Conversar com a sala..." autocomplete="off">
+                <button id="btn-send-message" class="btn-primary" style="padding: 10px 15px;">Enviar</button>
+            </div>
+        </section>
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="main.js"></script>
+
 </body>
 </html>

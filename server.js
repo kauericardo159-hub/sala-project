@@ -1,4 +1,4 @@
-// server.js - Servidor Central de Comunicação Real-Time — Alpha Version
+// server.js - Servidor Central de Comunicação Real-Time — Pro Version
 
 const express = require('express');
 const http = require('http');
@@ -13,7 +13,7 @@ const GITHUB_PAGES_URL = "https://kauericardo159-hub.github.io";
 app.use(cors({ origin: GITHUB_PAGES_URL }));
 const server = http.createServer(app);
 
-// Inicialização do Servidor Socket.io com headers de segurança
+// Inicialização do Servidor Socket.io
 const io = new Server(server, {
     cors: { 
         origin: GITHUB_PAGES_URL, 
@@ -23,31 +23,105 @@ const io = new Server(server, {
 
 // Endpoint de verificação de status (Health Check)
 app.get('/', (req, res) => { 
-    res.send('Servidor Alfa operando com Contas Centralizadas e UID Fixo!'); 
+    res.send('Servidor Pro operando com Sistema de Amigos e Modularidade!'); 
 });
 
-io.on('connection', (socket) => {
-    console.log(`[CONEXÃO] Usuário pareado ao socket ID: ${socket.id}`);
+// ==========================================================================
+// FUNÇÕES AUXILIARES DE NOTIFICAÇÃO SOCIAL
+// ==========================================================================
+function notifyUserFriendsList(uid) {
+    const account = Banco.getAccountByUid(uid);
+    if (account && account.socketId) {
+        io.to(account.socketId).emit('update_friends_list', Banco.getPopulatedFriendsList(uid));
+    }
+}
 
-    // ==========================================================================
-    // 1. REQUISITOS DE AUTENTICAÇÃO CENTRALIZADA (BANCO EM MEMÓRIA)
-    // ==========================================================================
+function notifyUserRequestsList(uid) {
+    const account = Banco.getAccountByUid(uid);
+    if (account && account.socketId) {
+        io.to(account.socketId).emit('update_friend_requests', Banco.getPopulatedRequestsList(uid));
+    }
+}
+
+// ==========================================================================
+// CONEXÃO PRINCIPAL (SOCKET)
+// ==========================================================================
+io.on('connection', (socket) => {
+    console.log(`[CONEXÃO] Socket engatado: ${socket.id}`);
+
+    // ==========================================
+    // 1. AUTENTICAÇÃO E STATUS ONLINE
+    // ==========================================
     
-    // Processa novas contas gerando o UID fixo (#000000)
     socket.on('submit_register', ({ username, displayName, password }) => {
         const resultado = Banco.registerAccount(username, displayName, password);
+        if (resultado.success) {
+            Banco.setUserOnlineStatus(resultado.user.uid, true, socket.id);
+        }
         socket.emit('auth_response', resultado);
     });
 
-    // Valida credenciais no servidor contra volatilidade de cookies locais
     socket.on('submit_login', ({ username, password }) => {
         const resultado = Banco.loginAccount(username, password);
-        socket.emit('auth_response', resultado);
+        if (resultado.success) {
+            const uid = resultado.user.uid;
+            
+            // 1. Marca como online
+            Banco.setUserOnlineStatus(uid, true, socket.id);
+            socket.emit('auth_response', resultado);
+
+            // 2. Envia as listas sociais do próprio usuário
+            notifyUserFriendsList(uid);
+            notifyUserRequestsList(uid);
+
+            // 3. Avisa aos amigos dele que ele ficou Online
+            const account = Banco.getAccountByUid(uid);
+            if (account && account.friends) {
+                account.friends.forEach(friendUid => notifyUserFriendsList(friendUid));
+            }
+        } else {
+            socket.emit('auth_response', resultado);
+        }
     });
 
-    // ==========================================================================
-    // 2. SISTEMA DE SALAS E NAVEGAÇÃO DE CONTEÚDO
-    // ==========================================================================
+    // ==========================================
+    // 2. SISTEMA SOCIAL (AMIGOS)
+    // ==========================================
+
+    socket.on('send_friend_request', ({ senderUid, targetUid }) => {
+        const resultado = Banco.sendFriendRequest(senderUid, targetUid);
+        if (resultado.success) {
+            socket.emit('friend_notification', resultado.message);
+            notifyUserRequestsList(targetUid); // Atualiza a tela de quem recebeu
+        } else {
+            socket.emit('friend_notification', resultado.message); // Erro
+        }
+    });
+
+    socket.on('respond_friend_request', ({ myUid, targetUid, action }) => {
+        const resultado = Banco.respondFriendRequest(myUid, targetUid, action);
+        if (resultado) {
+            // Atualiza os convites e a lista de quem aceitou
+            notifyUserRequestsList(myUid);
+            notifyUserFriendsList(myUid);
+            // Atualiza a lista de quem foi aceito
+            notifyUserFriendsList(targetUid);
+            
+            if (action === "accept") {
+                io.to(resultado.senderSocket).emit('friend_notification', 'Seu pedido de amizade foi aceito!');
+            }
+        }
+    });
+
+    socket.on('remove_friend', ({ myUid, targetUid }) => {
+        Banco.removeFriend(myUid, targetUid);
+        notifyUserFriendsList(myUid);
+        notifyUserFriendsList(targetUid);
+    });
+
+    // ==========================================
+    // 3. GERENCIAMENTO DE SALAS
+    // ==========================================
 
     socket.on('request_room_list', () => {
         socket.emit('update_room_list', Banco.getPublicRoomsList());
@@ -69,8 +143,8 @@ io.on('connection', (socket) => {
                 });
             }
             socket.join(novaSala.id);
+            socket.emit('room_joined', novaSala); // Aciona o gatilho para limpar o chat
             socket.emit('room_joined_success', novaSala);
-            // Notifica o feed global instantaneamente
             io.emit('update_room_list', Banco.getPublicRoomsList());
         } else {
             socket.emit('room_error', 'Não foi possível criar esta sala.');
@@ -87,124 +161,102 @@ io.on('connection', (socket) => {
 
         if (resultado.success) {
             socket.join(roomId);
+            socket.emit('room_joined'); // Aciona o gatilho para limpar o chat no frontend
             socket.emit('room_joined_success', resultado.room);
             
-            // Sincronização em tempo real na sala específica
             io.to(roomId).emit('room_notification', { text: `${user.name} entrou na sala.` });
-            io.to(roomId).emit('room_users_updated', resultado.room.users);
+            io.to(roomId).emit('room_users_update', resultado.room.users);
             io.emit('update_room_list', Banco.getPublicRoomsList());
         } else {
             socket.emit('room_error', resultado.message);
         }
     });
 
-    socket.on('leave_room', ({ roomId, uid }) => {
+    socket.on('leave_room', ({ roomId }) => {
         const room = Banco.findRoomById(roomId);
-        let userName = uid;
+        let userName = "Alguém";
+        let uid = null;
+        
         if (room) {
-            const user = room.users.find(u => u.uid === uid);
-            if (user) userName = user.name;
+            const user = room.users.find(u => u.socketId === socket.id);
+            if (user) {
+                userName = user.name;
+                uid = user.uid;
+            }
         }
         
-        const roomAtualizada = Banco.removeUserFromRoom(roomId, uid);
-        socket.leave(roomId);
-        
-        if (roomAtualizada) {
-            io.to(roomId).emit('room_notification', { text: `${userName} saiu da sala.` });
-            io.to(roomId).emit('room_users_updated', roomAtualizada.users);
-        }
-        io.emit('update_room_list', Banco.getPublicRoomsList());
-    });
-
-    socket.on('delete_room', ({ roomId }) => {
-        const room = Banco.findRoomById(roomId);
-        if (room) {
-            io.to(roomId).emit('room_deleted_by_owner');
-            Banco.deleteRoom(roomId);
+        if (uid) {
+            const roomAtualizada = Banco.removeUserFromRoom(roomId, uid);
+            socket.leave(roomId);
+            
+            if (roomAtualizada) {
+                io.to(roomId).emit('room_notification', { text: `${userName} saiu da sala.` });
+                io.to(roomId).emit('room_users_update', roomAtualizada.users);
+            }
             io.emit('update_room_list', Banco.getPublicRoomsList());
         }
     });
 
-    // ==========================================================================
-    // 3. EVENTOS DE SINALIZAÇÃO REAL-TIME (VOZ E MIC)
-    // ==========================================================================
+    // ==========================================
+    // 4. CHAT DE TEXTO E VOZ
+    // ==========================================
 
-    socket.on('update_mic_status', ({ roomId, micOn }) => {
+    socket.on('send_message', (messagePayload) => {
+        // Dispara para todo mundo na sala (incluindo quem enviou para que ele veja a própria msg)
+        io.to(messagePayload.roomId).emit('receive_message', messagePayload);
+    });
+
+    socket.on('toggle_mic', ({ roomId, micOn }) => {
         const room = Banco.findRoomById(roomId);
         if (room) {
             const user = room.users.find(u => u.socketId === socket.id);
             if (user) {
-                const listaUsuariosAtualizada = Banco.updateUserMic(roomId, user.uid, micOn);
-                if (listaUsuariosAtualizada) {
-                    io.to(roomId).emit('room_users_updated', listaUsuariosAtualizada);
-                }
+                Banco.updateUserMic(roomId, user.uid, micOn);
+                // Avisa apenas sobre esse usuário, economiza banda em vez de mandar o array inteiro
+                io.to(roomId).emit('user_mic_toggled', { uid: user.uid, micOn });
             }
         }
     });
 
-    socket.on('update_speaking_status', ({ roomId, isSpeaking }) => {
+    socket.on('is_speaking', ({ roomId, isSpeaking }) => {
         const room = Banco.findRoomById(roomId);
         if (room) {
             const user = room.users.find(u => u.socketId === socket.id);
             if (user) {
                 user.isSpeaking = isSpeaking;
-                // Broadcast otimizado para evitar loops de processamento
-                socket.to(roomId).emit('room_users_updated', room.users);
+                io.to(roomId).emit('user_speaking', { uid: user.uid, isSpeaking });
             }
         }
     });
 
-    socket.on('update_user_profile', ({ roomId, user }) => {
-        const room = Banco.findRoomById(roomId);
-        if (room) {
-            const localUser = room.users.find(u => u.uid === user.uid);
-            if (localUser) {
-                localUser.name = user.name;
-                localUser.avatar = user.avatar;
-                Banco.updateAccountProfile(user.uid, user.name, user.avatar);
-                io.to(roomId).emit('room_users_updated', room.users);
-            }
-        }
-    });
-
-    // ==========================================================================
-    // 4. MODERAÇÃO E SISTEMA DE MENSAGENS (CHAT)
-    // ==========================================================================
-
-    socket.on('kick_user_request', ({ roomId, targetUid }) => {
-        const room = Banco.findRoomById(roomId);
-        if (room) {
-            const targetUser = room.users.find(u => u.uid === targetUid);
-            if (targetUser && targetUser.socketId) {
-                io.to(targetUser.socketId).emit('room_kicked');
-                Banco.removeUserFromRoom(roomId, targetUid);
-                io.to(roomId).emit('room_users_updated', room.users);
-                io.to(roomId).emit('room_notification', { text: `${targetUser.name} foi expulso pelo proprietário.` });
-                io.emit('update_room_list', Banco.getPublicRoomsList());
-            }
-        }
-    });
-
-    socket.on('send_chat_message', (messageData) => {
-        // Envia para todos na sala exceto para o remetente original (controle no client)
-        socket.to(messageData.roomId).emit('receive_chat_message', messageData);
-    });
-
-    // Tratamento estrito de encerramento abrupto (Queda de conexão/Aba fechada)
+    // ==========================================
+    // 5. TRATAMENTO DE DESCONEXÃO (FECHOU ABA)
+    // ==========================================
     socket.on('disconnect', () => {
-        console.log(`[DESCONEXÃO] Canal encerrado para o socket: ${socket.id}`);
-        const roomAtualizada = Banco.removeUserFromAllRooms(socket.id);
+        console.log(`[DESCONEXÃO] Socket perdido: ${socket.id}`);
         
-        if (roomAtualizada) {
-            io.to(roomAtualizada.id).emit('room_notification', { text: `Um usuário desconectou da chamada.` });
-            io.to(roomAtualizada.id).emit('room_users_updated', roomAtualizada.users);
+        // Remove das salas e marca como offline
+        const { updatedRoom, disconnectedUid } = Banco.removeUserFromAllRooms(socket.id);
+        
+        // Se ele estava em uma sala, avisa o resto do pessoal lá
+        if (updatedRoom) {
+            io.to(updatedRoom.id).emit('room_notification', { text: `Alguém caiu da chamada.` });
+            io.to(updatedRoom.id).emit('room_users_update', updatedRoom.users);
             io.emit('update_room_list', Banco.getPublicRoomsList());
+        }
+
+        // Se ele tinha uma conta logada, avisa os amigos que ele ficou offline
+        if (disconnectedUid) {
+            const account = Banco.getAccountByUid(disconnectedUid);
+            if (account && account.friends) {
+                account.friends.forEach(friendUid => notifyUserFriendsList(friendUid));
+            }
         }
     });
 });
 
-// Inicialização da porta dinâmica (Render de Produção / Localhost)
+// Inicialização
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => { 
-    console.log(`[SUCESSO] Servidor Alfa rodando de forma estável na porta ${PORT}`); 
+    console.log(`[SUCESSO] Servidor Pro rodando na porta ${PORT}`); 
 });
