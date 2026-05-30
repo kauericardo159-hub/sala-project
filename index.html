@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Discord Unificado</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main id="app-container">
+        
+        <section id="tela-salas" class="container">
+            <header class="lobby-header">
+                <h1>Mini Discord</h1>
+                <p>Crie ou entre em uma sala para começar a conversar</p>
+            </header>
+            
+            <div class="card-secao">
+                <label for="username">Seu Apelido</label>
+                <input type="text" id="username" placeholder="Ex: Yoda_Do_Code" required>
+            </div>
+
+            <div class="card-secao criacao-sala">
+                <h3>Criar Nova Sala</h3>
+                <input type="text" id="new-room-name" placeholder="Nome da sala (ex: geral)">
+                
+                <div class="seletor-grupo">
+                    <select id="room-type" onchange="alternarCampoSenha()">
+                        <option value="publica">🌐 Sala Pública</option>
+                        <option value="privada">🔒 Sala Privada (Com Senha)</option>
+                    </select>
+                </div>
+                
+                <input type="password" id="room-password" placeholder="Digite a senha da sala" style="display: none;">
+                <button class="btn-principal" onclick="criarNovaSala()">Criar Sala</button>
+            </div>
+
+            <div class="card-secao">
+                <h3>Salas Disponíveis</h3>
+                <div id="lista-de-salas">
+                    <p class="txt-vazio">Nenhuma sala ativa no momento...</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="tela-chat" class="container-chat" style="display: none;">
+            
+            <div class="painel-call">
+                <div class="call-header">
+                    <h2 id="nome-sala-titulo">Sala: #geral</h2>
+                </div>
+                <div class="video-grid" id="video-grid">
+                    </div>
+                <div class="call-actions">
+                    <button onclick="sairDaSala()" class="btn-sair">Desconectar</button>
+                </div>
+            </div>
+            
+            <div class="painel-texto">
+                <div class="chat-area" id="chat-mensagens">
+                    </div>
+                <div class="input-area">
+                    <input type="text" id="txt-mensagem" placeholder="Conversar na sala e apertar Enter...">
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <script>
+        // Inicialização do Socket conectando de forma inteligente
+        const socket = io(window.location.origin || '/');
+        
+        // Variáveis Globais de Controle
+        let meuApelido = "";
+        let salaAtual = "";
+        let meuStream = null;
+        let peer = null;
+        const conexoesAtivas = {};
+
+        // Tratamento Global de Erros vindos do Servidor
+        socket.on('erro', (mensagem) => {
+            alert("⚠️ " + mensagem);
+        });
+
+        /* =========================================================
+           1. LOGICA DE GERENCIAMENTO DE SALAS (LOBBY)
+           ========================================================= */
+
+        function alternarCampoSenha() {
+            const tipo = document.getElementById('room-type').value;
+            const campoSenha = document.getElementById('room-password');
+            campoSenha.style.display = tipo === 'privada' ? 'block' : 'none';
+        }
+
+        function criarNovaSala() {
+            const apelido = document.getElementById('username').value.trim();
+            const nomeSala = document.getElementById('new-room-name').value.trim().toLowerCase();
+            const tipo = document.getElementById('room-type').value;
+            const senha = document.getElementById('room-password').value;
+
+            if (!apelido) return alert("Por favor, digite seu apelido primeiro.");
+            if (!nomeSala) return alert("Digite um nome para a sala.");
+            if (tipo === 'privada' && !senha) return alert("Salas privadas exigem uma senha.");
+
+            meuApelido = apelido;
+            socket.emit('criar-sala', { nomeSala, tipo, senha });
+        }
+
+        socket.on('sala-criada-sucesso', (nomeSala) => {
+            const senha = document.getElementById('room-password').value;
+            socket.emit('tentar-entrar', { nomeSala, senha });
+        });
+
+        socket.on('atualizar-salas', (salas) => {
+            const containerLista = document.getElementById('lista-de-salas');
+            if (!containerLista) return;
+
+            if (salas.length === 0) {
+                containerLista.innerHTML = `<p class="txt-vazio">Nenhuma sala ativa no momento...</p>`;
+                return;
+            }
+
+            containerLista.innerHTML = "";
+            salas.forEach(sala => {
+                const item = document.createElement('div');
+                item.className = "sala-item";
+                
+                const info = document.createElement('span');
+                const iconeCadeado = sala.tipo === 'privada' ? '🔒' : '🌐';
+                info.innerHTML = `<strong>${iconeCadeado} ${sala.id}</strong> (${sala.participantes} online)`;
+                
+                const btnEntrar = document.createElement('button');
+                btnEntrar.innerText = "Entrar";
+                btnEntrar.className = "btn-entrar-sala";
+                btnEntrar.onclick = () => clicarParaEntrar(sala.id, sala.tipo);
+
+                item.appendChild(info);
+                item.appendChild(btnEntrar);
+                containerLista.appendChild(item);
+            });
+        });
+
+        function clicarParaEntrar(nomeSala, tipo) {
+            const apelido = document.getElementById('username').value.trim();
+            if (!apelido) return alert("Por favor, digite seu apelido antes de entrar.");
+            
+            meuApelido = apelido;
+            let senha = null;
+
+            if (tipo === 'privada') {
+                senha = prompt("Esta sala é privada. Digite a senha para entrar:");
+                if (senha === null) return; 
+            }
+
+            socket.emit('tentar-entrar', { nomeSala, senha });
+        }
+
+        // Quando o servidor dá o "Ok", disparamos a inicialização do ecossistema de Chat/Call
+        socket.on('entrada-autorizada', (nomeSala) => {
+            salaAtual = nomeSala;
+            inicializarSistemaComunicacao();
+        });
+
+
+        /* =========================================================
+           2. LOGICA EM SEGUNDO PLANO: CHAT DE TEXTO E CALL (WebRTC)
+           ========================================================= */
+
+        async function inicializarSistemaComunicacao() {
+            // Transição visual de telas
+            document.getElementById('tela-salas').style.display = 'none';
+            document.getElementById('tela-chat').style.display = 'flex';
+            document.getElementById('nome-sala-titulo').innerText = `💬 Sala: #${salaAtual}`;
+            document.getElementById('chat-mensagens').innerHTML = ""; 
+
+            // Configuração refinada do input de mensagens de texto
+            const inputMensagem = document.getElementById('txt-mensagem');
+            const novoInput = inputMensagem.cloneNode(true);
+            inputMensagem.parentNode.replaceChild(novoInput, inputMensagem);
+
+            novoInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && e.target.value.trim() !== "") {
+                    socket.emit('send-message', e.target.value, meuApelido);
+                    e.target.value = "";
+                }
+            });
+
+            // Captura de mídias de Áudio e Vídeo (Habilitado para Background)
+            try {
+                meuStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                renderizarVideo(document.createElement('video'), meuStream, true);
+            } catch (erro) {
+                console.warn("Câmera bloqueada ou ausente. Tentando apenas microfone...", erro);
+                try {
+                    meuStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                } catch (erroAudio) {
+                    console.error("Nenhum hardware de áudio/vídeo disponível.", erroAudio);
+                    alert("Aviso: Você entrou sem microfone e sem câmera. Apenas assistirá.");
+                }
+            }
+
+            // Inicializando a infraestrutura P2P com PeerJS
+            peer = new Peer(undefined, {
+                host: '/',
+                port: '443',
+                secure: true
+            });
+
+            peer.on('open', (idUnique) => {
+                // Informa ao servidor que estamos prontos com nosso ID de Call
+                socket.emit('join-room', salaAtual, idUnique);
+            });
+
+            // Ouvindo chamadas recebidas de outros usuários
+            peer.on('call', call => {
+                call.answer(meuStream);
+                const videoInbound = document.createElement('video');
+                call.on('stream', streamRemoto => {
+                    renderizarVideo(videoInbound, streamRemoto);
+                });
+            });
+
+            // Quando o servidor avisa que uma nova pessoa entrou na sala
+            socket.on('user-connected', userId => {
+                if(meuStream) {
+                    const call = peer.call(userId, meuStream);
+                    const videoInbound = document.createElement('video');
+                    call.on('stream', streamRemoto => {
+                        renderizarVideo(videoInbound, streamRemoto);
+                    });
+                    call.on('close', () => { videoInbound.remove(); });
+                    conexoesAtivas[userId] = call;
+                }
+            });
+
+            // Quando alguém desconecta da sala
+            socket.on('user-disconnected', userId => {
+                if (conexoesAtivas[userId]) {
+                    conexoesAtivas[userId].close();
+                    delete conexoesAtivas[userId];
+                }
+            });
+        }
+
+        // Recebimento e renderização de mensagens de texto em tempo real
+        socket.on('create-message', (msg, username) => {
+            const areaMensagens = document.getElementById('chat-mensagens');
+            if (!areaMensagens) return;
+            
+            const div = document.createElement('div');
+            div.className = "mensagem-bloco";
+            div.innerHTML = `<span class="autor">${username}:</span><span class="texto">${msg}</span>`;
+            
+            areaMensagens.appendChild(div);
+            areaMensagens.scrollTop = areaMensagens.scrollHeight; // Auto-scroll estilo discord
+        });
+
+        function renderizarVideo(videoElement, streamObj, mutado = false) {
+            if(!streamObj) return;
+            videoElement.srcObject = streamObj;
+            videoElement.addEventListener('loadedmetadata', () => { 
+                videoElement.play().catch(e => console.log("Play automático evitado pelo navegador", e)); 
+            });
+            if (mutado) videoElement.muted = true;
+            document.getElementById('video-grid').append(videoElement);
+        }
+
+        function sairDaSala() {
+            // Corta transmissões de câmera/microfone se existirem antes de resetar
+            if (meuStream) {
+                meuStream.getTracks().forEach(track => track.stop());
+            }
+            // Recarrega o estado limpo da página voltando para a seleção de salas
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
