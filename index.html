@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala Project - Chat & Voz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        
+        <div id="screen-login" style="display: none;">
+            <h2>Boas-vindas ao Sala Project!</h2>
+            <p>Escolha um nome de usuário para começar a conversar.</p>
+            
+            <input type="text" id="login-username" placeholder="Digite seu nome (ex: Kauê)" required>
+            <button class="btn-primary" style="width: 100%;" onclick="loginOrCreateAccount(document.getElementById('login-username').value)">
+                Entrar / Criar Conta
+            </button>
+        </div>
+
+        <div id="screen-home" style="display: none;">
+            <div class="home-layout">
+                
+                <div class="left-column" style="display: flex; flex-direction: column; gap: 20px;">
+                    
+                    <div class="profile-card">
+                        <div class="avatar-container">
+                            <img id="avatar-preview" src="user-photo.jpg" alt="Foto de Perfil" class="avatar-img">
+                            <label for="avatar-input" class="avatar-label">📷</label>
+                            <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(event)">
+                        </div>
+                        <h3 id="user-uid" style="margin-bottom: 4px;">Nome#0000</h3>
+                        <p style="color: var(--text-muted); font-size: 13px;">Clique no ícone para alterar sua foto</p>
+                    </div>
+
+                    <div class="profile-card" style="text-align: left;">
+                        <h3>Criar uma Sala</h3>
+                        
+                        <label style="font-size: 13px; color: var(--text-muted);">Nome da Sala</label>
+                        <input type="text" id="room-name-input" placeholder="Ex: Galera do Game">
+
+                        <label style="font-size: 13px; color: var(--text-muted);">Privacidade</label>
+                        <select id="room-type-select" onchange="document.getElementById('room-password-container').style.display = this.value === 'private' ? 'block' : 'none'">
+                            <option value="public">Pública 🔓</option>
+                            <option value="private">Privada 🔒</option>
+                        </select>
+
+                        <div id="room-password-container" style="display: none;">
+                            <label style="font-size: 13px; color: var(--text-muted);">Senha de Acesso</label>
+                            <input type="password" id="room-password-input" placeholder="Digite a senha da sala">
+                        </div>
+
+                        <label style="font-size: 13px; color: var(--text-muted);">Limite de Pessoas</label>
+                        <input type="number" id="room-limit-input" value="10" min="2" max="99">
+
+                        <button class="btn-success" style="width: 100%; margin-top: 10px;" onclick="createRoomData()">
+                            🚀 Criar e Entrar
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="rooms-section">
+                    <h2>Salas Disponíveis <span class="live-badge">Ao Vivo</span></h2>
+                    <p style="color: var(--text-muted); font-size: 14px;">Selecione uma sala pública ou digite a senha de uma sala privada para entrar.</p>
+                    
+                    <div id="rooms-live-list" class="rooms-list">
+                        <div style="color: var(--text-muted); text-align: center; padding: 20px;">
+                            Nenhuma sala ativa no momento. Seja o primeiro a criar uma!
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="screen-room" style="display: none;">
+            <div class="room-layout">
+                
+                <div class="room-header">
+                    <div>
+                        <h2 id="room-title" style="margin-bottom: 0;">Nome da Sala</h2>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <div id="owner-controls" style="display: none;">
+                            <button class="btn-danger" style="padding: 8px 14px;" onclick="deleteRoomByOwner()">👑 Excluir Sala</button>
+                        </div>
+                        <button class="btn-danger" style="padding: 8px 14px;" onclick="leaveRoom()">Sair da Sala</button>
+                    </div>
+                </div>
+
+                <div class="room-body">
+                    
+                    <div class="voice-container">
+                        <h3 style="font-size: 16px; color: var(--text-muted); margin-bottom: 12px;">Chamada de Voz</h3>
+                        
+                        <div id="voice-cards-container" class="voice-grid">
+                            </div>
+
+                        <div class="voice-controls">
+                            <button id="btn-mic" class="btn-primary" onclick="toggleMicrophone()">Ativar Microfone</button>
+                            <button class="btn-danger" onclick="leaveRoom()">Sair da Call</button>
+                        </div>
+                    </div>
+
+                    <div class="chat-container">
+                        <h3 style="font-size: 16px; color: var(--text-muted); margin-bottom: 12px;">Bate-papo</h3>
+                        
+                        <div id="chat-area" class="chat-messages">
+                            </div>
+
+                        <div class="chat-footer">
+                            <button class="btn-file" title="Enviar Arquivo" onclick="alert('Funcionalidade de arquivos em breve!')">📎</button>
+                            <input type="text" id="chat-input" placeholder="Conversar na sala..." onkeydown="if(event.key === 'Enter') sendTextMessage()">
+                            <button class="btn-primary" onclick="sendTextMessage()">Enviar</button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>

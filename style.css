@@ -1,0 +1,424 @@
+/* ==========================================================================
+   1. CONFIGURAÇÕES GERAIS E PALETA DE CORES (Estilo Dark)
+   ========================================================================== */
+:root {
+    --bg-main: #1e1f22;       /* Fundo principal (Discord Dark) */
+    --bg-sidebar: #2b2d31;    /* Fundo de cards e seções secundárias */
+    --bg-input: #313338;      /* Fundo de inputs e chat */
+    --text-color: #dbdee1;    /* Cor do texto principal */
+    --text-muted: #949ba4;    /* Texto secundário/timestamp */
+    --accent-color: #5865f2;  /* Azul Discord (Botões principais) */
+    --accent-hover: #4752c4;  /* Azul ao passar o mouse */
+    --danger-color: #f23f43;  /* Vermelho para Sair/Excluir/Kick */
+    --success-color: #23a55a; /* Verde para Online/Público/Microfone ligado */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* Container que envelopa as telas do app */
+.container {
+    width: 100%;
+    max-width: 1100px;
+    background-color: var(--bg-sidebar);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    padding: 24px;
+}
+
+/* ==========================================================================
+   2. COMPONENTES REUTILIZÁVEIS (Inputs, Botões e Títulos)
+   ========================================================================== */
+h2, h3 {
+    margin-bottom: 16px;
+    color: #fff;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--bg-input);
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 14px;
+    margin-bottom: 14px;
+    transition: border 0.2s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+button {
+    cursor: pointer;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.2s, transform 0.1s;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #da373c;
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: #fff;
+}
+
+/* ==========================================================================
+   3. TELA DE LOGIN
+   ========================================================================== */
+#screen-login {
+    max-width: 400px;
+    margin: 40px auto;
+    text-align: center;
+}
+
+#screen-login h2 {
+    font-size: 26px;
+    margin-bottom: 8px;
+}
+
+#screen-login p {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+
+/* ==========================================================================
+   4. TELA HOME (Perfil e Listagem de Salas)
+   ========================================================================== */
+.home-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 768px) {
+    .home-layout { grid-template-columns: 1fr; }
+}
+
+/* Seção do Perfil */
+.profile-card {
+    background-color: var(--bg-main);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.avatar-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 16px auto;
+}
+
+.avatar-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--accent-color);
+}
+
+.avatar-label {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: var(--accent-color);
+    padding: 6px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.avatar-label:hover { background-color: var(--accent-hover); }
+#avatar-input { display: none; }
+
+.user-uid {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+/* Listagem de salas [Ao Vivo] */
+.rooms-section {
+    background-color: var(--bg-main);
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.live-badge {
+    background-color: var(--danger-color);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.room-card {
+    background-color: var(--bg-sidebar);
+    padding: 16px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid var(--success-color);
+}
+
+/* ==========================================================================
+   5. DENTRO DA SALA (Cards de Voz & Chat Estilo Discord)
+   ========================================================================== */
+.room-layout {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 75vh;
+}
+
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--bg-main);
+}
+
+.room-body {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    padding-top: 16px;
+    height: 100%;
+    overflow: hidden;
+}
+
+@media (max-width: 900px) {
+    .room-body { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+}
+
+/* Seção de Voz / Microfone */
+.voice-container {
+    background-color: var(--bg-main);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.voice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    align-content: flex-start;
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 16px;
+}
+
+/* Card de Usuário na Call */
+.voice-card {
+    background-color: var(--bg-sidebar);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    position: relative;
+    border: 2px solid transparent;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Efeito quando a pessoa está falando no Microfone (Igual Discord) */
+.voice-card.speaking {
+    border-color: var(--success-color);
+    box-shadow: 0 0 12px rgba(35, 165, 90, 0.4);
+}
+
+.voice-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 8px;
+}
+
+.voice-name {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.voice-badge {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.voice-status {
+    font-size: 12px;
+    margin-top: 6px;
+    color: var(--text-muted);
+}
+
+.btn-kick {
+    background: transparent;
+    color: var(--danger-color);
+    padding: 2px 6px;
+    font-size: 11px;
+    margin-top: 8px;
+    border: 1px solid var(--danger-color);
+}
+.btn-kick:hover { background: rgba(242, 63, 67, 0.1); }
+
+.voice-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* Seção do Chat de Texto */
+.chat-container {
+    background-color: var(--bg-main);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Balão/Item de Mensagem */
+.message-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.message-content {
+    flex-grow: 1;
+}
+
+.chat-name {
+    font-weight: bold;
+    color: #fff;
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+.chat-time {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.chat-text {
+    font-size: 14px;
+    margin-top: 4px;
+    word-break: break-word;
+}
+
+/* Mensagens do sistema (Ex: "Fulano entrou na sala") */
+.system-message {
+    color: var(--text-muted);
+    font-size: 13px;
+    display: block;
+    width: 100%;
+}
+
+/* Barra de digitação inferior */
+.chat-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.chat-footer input {
+    margin-bottom: 0;
+}
+
+.btn-file {
+    background-color: var(--bg-input);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-color);
+    font-size: 18px;
+    padding: 0 14px;
+}
+.btn-file:hover { background-color: var(--bg-sidebar); }
+
+/* Customização da barra de rolagem (Scrollbar) */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #111214;
+    border-radius: 10px;
+}
