@@ -56,7 +56,7 @@
                         <label for="avatar-input" class="avatar-hover-trigger" title="Alterar foto de perfil">
                             <span>Alterar</span>
                         </label>
-                        <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(event)">
+                        <input type="file" id="avatar-input" accept="image/*">
                     </div>
                     <div class="user-meta">
                         <h3 id="sidebar-display-name">Carregando...</h3>
@@ -70,7 +70,7 @@
                         <label>Alterar Nome de Exibição</label>
                         <div class="inline-action-input">
                             <input type="text" id="profile-display-name" placeholder="Novo nome...">
-                            <button class="btn-success icon-btn" onclick="updateDisplayName()" title="Salvar Novo Nome">💾</button>
+                            <button id="btn-save-profile-name" class="btn-success icon-btn" title="Salvar Novo Nome">💾</button>
                         </div>
                     </div>
                 </div>
@@ -102,12 +102,12 @@
                         <input type="password" id="room-password-input" placeholder="Defina a senha da sala">
                     </div>
 
-                    <button class="btn-primary full-width" style="margin-top: 10px;" onclick="createRoomData()">
+                    <button id="btn-create-room-submit" class="btn-primary full-width" style="margin-top: 10px;">
                         🚀 Lançar Sala de Voz
                     </button>
                 </div>
 
-                <button class="btn-danger-text full-width" onclick="logout()">Desconectar da Conta</button>
+                <button id="btn-logout" class="btn-danger-text full-width">Desconectar da Conta</button>
             </aside>
 
             <main class="main-rooms-feed">
@@ -135,19 +135,19 @@
                     </div>
                     <div class="room-action-controls">
                         <div id="owner-controls" style="display: none;">
-                            <button class="btn-danger outline" onclick="deleteRoomByOwner()">👑 Fechar Sala</button>
+                            <button id="btn-delete-room" class="btn-danger outline">👑 Fechar Sala</button>
                         </div>
-                        <button class="btn-danger" onclick="leaveRoom()">Sair da Sala</button>
+                        <button id="btn-leave-room-top" class="btn-danger room-leave-trigger">Sair da Sala</button>
                     </div>
                 </header>
 
                 <div id="voice-cards-container" class="voice-subscribers-grid"></div>
 
                 <footer class="voice-dock-controls">
-                    <button id="btn-mic" class="btn-success status-dock-btn" onclick="toggleMicrophone()">
+                    <button id="btn-mic" class="btn-success status-dock-btn">
                         🎙️ Microfone Ativo
                     </button>
-                    <button class="btn-danger status-dock-btn" onclick="leaveRoom()">
+                    <button id="btn-leave-room-dock" class="btn-danger status-dock-btn room-leave-trigger">
                         🔇 Desconectar Call
                     </button>
                 </footer>
@@ -161,11 +161,11 @@
                 <div id="chat-area" class="chat-viewport"></div>
 
                 <footer class="chat-input-wrapper">
-                    <button class="chat-addon-btn" title="Enviar arquivos de mídia" onclick="alert('Selecione arquivos em breve!')">
+                    <button id="btn-chat-media-mock" class="chat-addon-btn" title="Enviar arquivos de mídia">
                         ➕
                     </button>
-                    <input type="text" id="chat-input" placeholder="Conversar com a sala..." onkeydown="if(event.key === 'Enter') sendTextMessage()">
-                    <button class="chat-send-btn" onclick="sendTextMessage()">Enviar</button>
+                    <input type="text" id="chat-input" placeholder="Conversar com a sala...">
+                    <button id="btn-chat-send" class="chat-send-btn">Enviar</button>
                 </footer>
             </section>
 

@@ -3,14 +3,14 @@
 const bancoDados = {
     rooms: [],        // [{ id, name, type, password, limit, ownerId, users: [] }]
     bannedUsers: {},  // { roomId: [uid1, uid2] }
-    accounts: {},     // Novo: Guarda as contas cadastradas do sistema { "@username": { uid, name, avatar, password } }
-    userCounter: 0    // Novo: Contador para gerar o número fixo e permanente do UID (#000001, #000002...)
+    accounts: {},     // Guarda as contas cadastradas do sistema { "@username": { uid, name, avatar, password } }
+    userCounter: 0    // Contador para gerar o número fixo e permanente do UID (#000001, #000002...)
 };
 
 const BancoController = {
 
     // ==========================================
-    // NOVO: SISTEMA CENTRAL DE CONTAS E AUTENTICAÇÃO
+    // 1. SISTEMA CENTRAL DE CONTAS E AUTENTICAÇÃO
     // ==========================================
 
     // Registra uma nova conta fixando o UID permanente de forma estrita
@@ -31,7 +31,7 @@ const BancoController = {
             uid: permanentUid,
             username: formattedUsername,
             name: displayName,
-            avatar: "user-photo.jpg",
+            avatar: "user-photo.jpg", // Avatar padrão inicial
             password: password
         };
 
@@ -62,23 +62,38 @@ const BancoController = {
         return { success: true, user: safeAccount };
     },
 
-    // Permite que o usuário mude o nome de exibição ou avatar no servidor
+    // Permite que o usuário mude o nome de exibição ou avatar no servidor e atualiza salas ativas
     updateAccountProfile(uid, newName, newAvatar) {
-        // Encontra a conta associada vasculhando pelo UID permanente
+        // 1. Encontra e atualiza o cadastro mestre na tabela de contas
         const usernameKey = Object.keys(bancoDados.accounts).find(
             key => bancoDados.accounts[key].uid === uid
         );
 
-        if (usernameKey) {
-            if (newName) bancoDados.accounts[usernameKey].name = newName;
-            if (newAvatar) bancoDados.accounts[usernameKey].avatar = newAvatar;
-            return bancoDados.accounts[usernameKey];
-        }
-        return null;
+        if (!usernameKey) return null;
+
+        const account = bancoDados.accounts[usernameKey];
+        if (newName) account.name = newName;
+        if (newAvatar) account.avatar = newAvatar;
+
+        console.log(`[PERFIL ATUALIZADO] Cadastro de ${uid} atualizado no servidor.`);
+
+        // 2. Sincroniza em tempo real as propriedades caso o usuário esteja dentro de alguma sala
+        bancoDados.rooms.forEach(room => {
+            const userInRoom = room.users.find(u => u.uid === uid);
+            if (userInRoom) {
+                if (newName) userInRoom.name = newName;
+                if (newAvatar) userInRoom.avatar = newAvatar;
+                console.log(`[SINCRONIZAÇÃO] Dados de ${uid} replicados na sala: ${room.name}`);
+            }
+        });
+
+        // Retorna a conta segura atualizada
+        const { password: _, ...safeAccount } = account;
+        return safeAccount;
     },
 
     // ==========================================
-    // OPERAÇÕES DE GERENCIAMENTO DE SALAS
+    // 2. OPERAÇÕES DE GERENCIAMENTO DE SALAS
     // ==========================================
 
     getPublicRoomsList() {
@@ -116,7 +131,7 @@ const BancoController = {
     },
 
     // ==========================================
-    // OPERAÇÕES DE PARTICIPANTES (VOZ E PRESENÇA)
+    // 3. OPERAÇÕES DE PARTICIPANTES (VOZ E PRESENÇA)
     // ==========================================
 
     addUserToRoom(roomId, user) {
@@ -131,6 +146,13 @@ const BancoController = {
             return { success: false, message: "A sala atingiu o limite máximo!" };
         }
 
+        // Puxa a foto e nome mais recentes salvos no servidor para blindar contra o reset de avatares
+        const masterAccount = Object.values(bancoDados.accounts).find(acc => acc.uid === user.uid);
+        if (masterAccount) {
+            user.name = masterAccount.name;
+            user.avatar = masterAccount.avatar;
+        }
+
         const userExists = room.users.find(u => u.uid === user.uid);
         if (!userExists) {
             user.micOn = user.micOn !== undefined ? user.micOn : false;
@@ -138,6 +160,8 @@ const BancoController = {
             room.users.push(user);
         } else {
             userExists.socketId = user.socketId;
+            userExists.name = user.name;
+            userExists.avatar = user.avatar;
         }
 
         return { success: true, room };

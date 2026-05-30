@@ -1,4 +1,4 @@
-// Conexão com o servidor back-end hospedado no Render
+// script.js - Arquitetura de Comunicação Real-Time (Alpha Version)
 const socket = io("https://sala-project.onrender.com");
 
 // ==========================================
@@ -13,30 +13,21 @@ let micInterval = null;
 let currentAuthMode = "login"; // 'login' ou 'register'
 
 // ==========================================
-// 1. INICIALIZAÇÃO E CONTROLE DAS ABAS DO HTML
+// 1. INICIALIZAÇÃO DE GATILHOS E COMPORTAMENTOS (DOM)
 // ==========================================
 window.addEventListener("DOMContentLoaded", () => {
-    // Força a exibição imediata da tela de login para evitar tela escura de carregamento
+    // Apresenta a interface inicial blindada contra telas escuras
     showScreen("login");
 
-    // Configura listeners das abas de login
-    setupAuthInterface();
+    // Acoplamento estrito de eventos nos elementos estruturais do HTML
+    setupCoreEventListeners();
 
-    // Monitora o seletor de privacidade de salas para exibir/ocultar o campo de senha
-    const roomTypeSelect = document.getElementById("room-type-select");
-    if (roomTypeSelect) {
-        roomTypeSelect.addEventListener("change", (e) => {
-            const container = document.getElementById("room-password-container");
-            if (container) container.style.display = e.target.value === "private" ? "block" : "none";
-        });
-    }
-
-    // Gerenciador de Persistência de conta
+    // Verificação de persistência local assistida pelo servidor
     const savedUser = localStorage.getItem("sala_project_user");
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
-            // Envia credenciais para reautenticação no servidor
+            // Sincroniza credenciais salvas no banco centralizado
             socket.emit("submit_login", { 
                 username: currentUser.uid.split('#')[0], 
                 password: currentUser.password_backup 
@@ -48,43 +39,109 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Configura os gatilhos visuais das abas sem misturar códigos inline
-function setupAuthInterface() {
+function setupCoreEventListeners() {
+    // Abas de Autenticação
     const tabLogin = document.getElementById("tab-login");
     const tabRegister = document.getElementById("tab-register");
-    const groupDisplayName = document.getElementById("group-displayname");
     const btnAuthSubmit = document.getElementById("btn-auth-submit");
-    const authSubtitle = document.getElementById("auth-subtitle");
 
     if (tabLogin && tabRegister) {
         tabLogin.addEventListener("click", () => {
             currentAuthMode = "login";
             tabLogin.classList.add("active");
             tabRegister.classList.remove("active");
-            if (groupDisplayName) groupDisplayName.style.display = "none";
-            if (btnAuthSubmit) btnAuthSubmit.innerText = "Entrar com Segurança";
-            if (authSubtitle) authSubtitle.innerText = "De volta ao ecossistema? Faça seu login.";
+            toggleAuthFields();
         });
 
         tabRegister.addEventListener("click", () => {
             currentAuthMode = "register";
             tabRegister.classList.add("active");
             tabLogin.classList.remove("active");
-            if (groupDisplayName) groupDisplayName.style.display = "block";
-            if (btnAuthSubmit) btnAuthSubmit.innerText = "Criar Nova Conta";
-            if (authSubtitle) authSubtitle.innerText = "Crie uma credencial única e defina seu perfil.";
+            toggleAuthFields();
         });
     }
 
     if (btnAuthSubmit) {
-        btnAuthSubmit.addEventListener("click", () => {
-            loginOrCreateAccount();
+        btnAuthSubmit.addEventListener("click", loginOrCreateAccount);
+    }
+
+    // Configurações e Gerenciamento de Perfil na Sidebar
+    const avatarInput = document.getElementById("avatar-input");
+    if (avatarInput) {
+        avatarInput.addEventListener("change", handleAvatarUpload);
+    }
+
+    const btnSaveProfileName = document.getElementById("btn-save-profile-name");
+    if (btnSaveProfileName) {
+        btnSaveProfileName.addEventListener("click", updateDisplayName);
+    }
+
+    const btnLogout = document.getElementById("btn-logout");
+    if (btnLogout) {
+        btnLogout.addEventListener("click", logout);
+    }
+
+    // Criação e Privacidade de Salas
+    const roomTypeSelect = document.getElementById("room-type-select");
+    if (roomTypeSelect) {
+        roomTypeSelect.addEventListener("change", (e) => {
+            const container = document.getElementById("room-password-container");
+            if (container) container.style.display = e.target.value === "private" ? "block" : "none";
+        });
+    }
+
+    const btnCreateRoomSubmit = document.getElementById("btn-create-room-submit");
+    if (btnCreateRoomSubmit) {
+        btnCreateRoomSubmit.addEventListener("click", createRoomData);
+    }
+
+    // Controles Internos da Sala (Voz / Moderação / Saída)
+    const btnDeleteRoom = document.getElementById("btn-delete-room");
+    if (btnDeleteRoom) {
+        btnDeleteRoom.addEventListener("click", deleteRoomByOwner);
+    }
+
+    document.querySelectorAll(".room-leave-trigger").forEach(trigger => {
+        trigger.addEventListener("click", leaveRoom);
+    });
+
+    const btnMic = document.getElementById("btn-mic");
+    if (btnMic) {
+        btnMic.addEventListener("click", toggleMicrophone);
+    }
+
+    // Chat Integrado (Envio e Captura por Teclado)
+    const btnChatSend = document.getElementById("btn-chat-send");
+    if (btnChatSend) {
+        btnChatSend.addEventListener("click", sendTextMessage);
+    }
+
+    const chatInput = document.getElementById("chat-input");
+    if (chatInput) {
+        chatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendTextMessage();
         });
     }
 }
 
+function toggleAuthFields() {
+    const groupDisplayName = document.getElementById("group-displayname");
+    const btnAuthSubmit = document.getElementById("btn-auth-submit");
+    const authSubtitle = document.getElementById("auth-subtitle");
+
+    if (currentAuthMode === "login") {
+        if (groupDisplayName) groupDisplayName.style.display = "none";
+        if (btnAuthSubmit) btnAuthSubmit.innerText = "Entrar com Segurança";
+        if (authSubtitle) authSubtitle.innerText = "De volta ao ecossistema? Faça seu login.";
+    } else {
+        if (groupDisplayName) groupDisplayName.style.display = "block";
+        if (btnAuthSubmit) btnAuthSubmit.innerText = "Criar Nova Conta";
+        if (authSubtitle) authSubtitle.innerText = "Crie uma credencial única e defina seu perfil.";
+    }
+}
+
 // ==========================================
-// 2. LOGICA CENTRAL DE AUTENTICAÇÃO
+// 2. LÓGICA CENTRAL DE AUTENTICAÇÃO E PERSISTÊNCIA
 // ==========================================
 function loginOrCreateAccount() {
     const userTagInput = document.getElementById("login-username").value.trim();
@@ -130,7 +187,7 @@ function logout() {
 }
 
 // ==========================================
-// 3. AMBIENTE DASHBOARD (HOME E PROFILE)
+// 3. AMBIENTE DASHBOARD (HOME E INTEGRALIZAÇÃO DE PERFIL)
 // ==========================================
 function initHome() {
     showScreen("home");
@@ -150,7 +207,7 @@ function updateDisplayName() {
     currentUser.name = newName;
     localStorage.setItem("sala_project_user", JSON.stringify(currentUser));
     if (document.getElementById("sidebar-display-name")) document.getElementById("sidebar-display-name").innerText = newName;
-    alert("Nome de exibição updated!");
+    alert("Nome de exibição atualizado!");
 
     if (currentRoom) {
         socket.emit("update_user_profile", { roomId: currentRoom.id, user: currentUser });
@@ -162,13 +219,15 @@ function handleAvatarUpload(event) {
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            currentUser.avatar = e.target.result;
-            if (document.getElementById("avatar-preview")) document.getElementById("avatar-preview").src = currentUser.avatar;
+            const base64Avatar = e.target.result;
+            
+            // Gravação local imediata para renderização fluida
+            currentUser.avatar = base64Avatar;
+            if (document.getElementById("avatar-preview")) document.getElementById("avatar-preview").src = base64Avatar;
             localStorage.setItem("sala_project_user", JSON.stringify(currentUser));
             
-            if (currentRoom) {
-                socket.emit("update_user_profile", { roomId: currentRoom.id, user: currentUser });
-            }
+            // Sincronização direta com a base de dados do servidor (Evita perdas na atualização)
+            socket.emit("update_user_profile", { roomId: currentRoom ? currentRoom.id : null, user: currentUser });
         };
         reader.readAsDataURL(file);
     }
@@ -216,9 +275,18 @@ socket.on("update_room_list", (rooms) => {
                 <span class="room-badge ${room.type}">${room.type === 'private' ? '🔒 Privada' : '🔓 Pública'}</span>
                 <div class="room-count">Membros: <b>${room.users.length}/${room.limit}</b></div>
             </div>
-            <button class="btn-primary" onclick="tryJoinRoom('${room.id}', '${room.type}')">Entrar na Sala</button>
+            <button class="btn-primary join-room-trigger" data-id="${room.id}" data-type="${room.type}">Entrar na Sala</button>
         `;
         listContainer.appendChild(roomCard);
+    });
+
+    // Vincula eventos dinamicamente nos botões gerados pelo feed de salas
+    document.querySelectorAll(".join-room-trigger").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            const roomId = e.target.getAttribute("data-id");
+            const roomType = e.target.getAttribute("data-type");
+            tryJoinRoom(roomId, roomType);
+        });
     });
 });
 
@@ -232,7 +300,7 @@ function tryJoinRoom(roomId, type) {
 }
 
 // ==========================================
-// 5. INFRAESTRUTURA DE VOZ EM TEMPO REAL
+// 5. INFRAESTRUTURA DE ÁUDIO EM TEMPO REAL
 // ==========================================
 socket.on("room_joined_success", async (room) => {
     currentRoom = room;
@@ -324,7 +392,7 @@ function toggleCardSpeakingUI(uid, isSpeaking) {
 }
 
 // ==========================================
-// 6. RENDERIZAÇÃO DAS GRIDS DE PARTICIPANTES
+// 6. RENDERIZAÇÃO E MODERAÇÃO DA GRID DE PARTICIPANTES
 // ==========================================
 function renderVoiceCards(users) {
     const cardContainer = document.getElementById("voice-cards-container");
@@ -350,9 +418,17 @@ function renderVoiceCards(users) {
                 ${isOwner ? '<span class="badge-role owner">👑 Dono</span>' : '<span class="badge-role">Membro</span>'}
             </div>
             ${currentRoom.ownerId === currentUser.uid && user.uid !== currentUser.uid ? 
-                `<button onclick="kickUser('${user.uid}')" class="btn-kick-action">Expulsar</button>` : ''}
+                `<button class="btn-kick-action kick-user-trigger" data-uid="${user.uid}">Expulsar</button>` : ''}
         `;
         cardContainer.appendChild(card);
+    });
+
+    // Escutador dinâmico mapeado para moderação de expulsão
+    document.querySelectorAll(".kick-user-trigger").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            const targetUid = e.target.getAttribute("data-uid");
+            kickUser(targetUid);
+        });
     });
 }
 
