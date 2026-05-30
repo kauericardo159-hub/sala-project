@@ -48,9 +48,9 @@ body {
 .container {
     background-color: var(--fundo-paineis);
     width: 100%;
-    max-width: 450px;
+    max-width: 460px;
     padding: 30px;
-    border-radius: 12px;
+    border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     border: 1px solid var(--borda-fina);
     animation: suavizarEntrada 0.3s ease-out;
@@ -58,7 +58,7 @@ body {
 
 .lobby-header {
     text-align: center;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
 
 .lobby-header h1 {
@@ -70,21 +70,16 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-.lobby-header p {
-    font-size: 13px;
-    color: var(--texto-secundario);
-}
-
 .card-secao {
     background-color: var(--fundo-cards);
     padding: 18px;
-    border-radius: 8px;
+    border-radius: 6px;
     margin-bottom: 16px;
     border: 1px solid var(--borda-fina);
 }
 
 .card-secao h3 {
-    font-size: 14px;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #fff;
@@ -100,7 +95,7 @@ body {
     margin-bottom: 8px;
 }
 
-/* Formulários Avançados */
+/* Elementos de Formulários */
 input[type="text"],
 input[type="password"],
 select {
@@ -108,7 +103,7 @@ select {
     padding: 12px;
     background-color: var(--fundo-inputs);
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--texto-principal);
     font-size: 14px;
     outline: none;
@@ -122,25 +117,30 @@ select:focus {
     background-color: #111214;
 }
 
+select {
+    cursor: pointer;
+}
+
 .btn-principal {
     background-color: var(--blurple);
     color: #fff;
     border: none;
     padding: 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     width: 100%;
     transition: background-color 0.2s, transform 0.1s;
+    margin-top: 8px;
 }
 
 .btn-principal:hover { background-color: var(--blurple-hover); }
-.btn-principal:active { transform: scale(0.98); }
+.btn-principal:active { transform: scale(0.99); }
 
 /* Itens da Lista de Canais */
 #lista-de-salas {
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
 }
 
@@ -150,7 +150,7 @@ select:focus {
     align-items: center;
     background-color: var(--fundo-inputs);
     padding: 12px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     margin-bottom: 8px;
     border-left: 3px solid var(--blurple);
 }
@@ -158,13 +158,16 @@ select:focus {
 .sala-item span {
     font-size: 14px;
     color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .btn-entrar-sala {
     background-color: var(--verde-sucesso);
     color: #fff;
     border: none;
-    padding: 6px 14px;
+    padding: 8px 16px;
     border-radius: 4px;
     font-size: 13px;
     font-weight: 600;
@@ -182,24 +185,21 @@ select:focus {
     padding: 10px 0;
 }
 
-/* ==========================================================================
-   ESTILOS DA TELA INTERNA DO CHAT E CALL (GRID COMPLETO)
-   ========================================================================== */
 .container-chat {
     display: flex;
     width: 95vw;
     height: 85vh;
     background-color: var(--fundo-paineis);
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
     border: 1px solid var(--borda-fina);
-    animation: suavizarEntrada 0.4s ease-out;
+    animation: suavizarEntrada 0.3s ease-out;
 }
 
-/* Área de Call / Vídeos (Esquerda) */
+/* Painel da Esquerda (Lista de pessoas na Call de Áudio) */
 .painel-call {
-    width: 45%;
+    width: 40%;
     background-color: #111214;
     padding: 20px;
     display: flex;
@@ -207,35 +207,27 @@ select:focus {
 }
 
 .call-header {
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 12px;
 }
 
 .call-header h2 {
-    font-size: 18px;
+    font-size: 16px;
     color: #fff;
     font-weight: 700;
 }
 
-.video-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 10px;
-    overflow-y: auto;
-    flex-grow: 1;
-    align-content: start;
+.status-call {
+    color: var(--verde-sucesso);
+    font-size: 12px;
+    display: block;
+    margin-top: 4px;
 }
 
-video {
-    width: 100%;
-    aspect-ratio: 16/10;
-    background-color: #232428;
-    border-radius: 6px;
-    object-fit: cover;
-    transform: scaleX(-1); /* Espelha o fluxo de vídeo para parecer natural */
-    border: 2px solid rgba(255, 255, 255, 0.05);
+.video-grid {
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
 .call-actions {
@@ -247,7 +239,7 @@ video {
     color: #fff;
     border: none;
     padding: 12px;
-    border-radius: 6px;
+    border-radius: 4px;
     font-weight: 700;
     cursor: pointer;
     width: 100%;
@@ -256,12 +248,13 @@ video {
 
 .btn-sair:hover { background-color: var(--vermelho-hover); }
 
-/* Área do Chat de Mensagens (Direita) */
+/* Painel da Direita (Histórico e envio de texto) */
 .painel-texto {
-    width: 55%;
+    width: 60%;
     display: flex;
     flex-direction: column;
     background-color: var(--fundo-cards);
+    border-left: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .chat-area {
@@ -270,21 +263,20 @@ video {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .mensagem-bloco {
-    background-color: rgba(0, 0, 0, 0.15);
+    background-color: rgba(0, 0, 0, 0.12);
     padding: 10px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     border-left: 3px solid var(--blurple);
     word-break: break-word;
-    animation: deslizarMensagem 0.2s ease-out;
+    animation: deslizarMensagem 0.15s ease-out;
 }
 
 .mensagem-bloco .autor {
     font-weight: 700;
-    color: #00aff4;
     font-size: 13px;
     margin-right: 6px;
 }
@@ -299,19 +291,11 @@ video {
     background-color: var(--fundo-cards);
 }
 
-.input-area input {
-    background-color: var(--fundo-inputs);
-    padding: 15px;
-    border-radius: 6px;
-    border: none;
-    margin: 0;
-}
-
 /* ==========================================================================
-   ANIMAÇÕES E RESPONSIVIDADE EM DISPOSITIVOS MÓVEIS (MOBILE)
+   ANIMAÇÕES E COMPORTAMENTO RESPONSIVO EM CELULARES
    ========================================================================== */
 @keyframes suavizarEntrada {
-    from { opacity: 0; transform: scale(0.97); }
+    from { opacity: 0; transform: scale(0.98); }
     to { opacity: 1; transform: scale(1); }
 }
 
@@ -320,6 +304,7 @@ video {
     to { opacity: 1; transform: translateX(0); }
 }
 
+/* Customização básica de Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #111214; border-radius: 10px; }
@@ -327,18 +312,193 @@ video {
 @media (max-width: 768px) {
     .container-chat {
         flex-direction: column;
-        height: 90vh;
+        height: 88vh;
     }
     .painel-call {
         width: 100%;
-        height: 38%;
+        height: 35%;
         border-bottom: 2px solid var(--fundo-app);
     }
     .painel-texto {
         width: 100%;
-        height: 62%;
+        height: 65%;
     }
-    .video-grid {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+/* ==========================================================================
+   ESTILOS EXCLUSIVOS DA TELA DO CHAT E DA CALL (CANAL DE VOZ)
+   ========================================================================== */
+
+.container-chat {
+    display: flex;
+    width: 95vw;
+    height: 85vh;
+    background-color: var(--fundo-paineis);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--borda-fina);
+    animation: suavizarEntrada 0.3s ease-out;
+}
+
+/* ==========================================================================
+   PAINEL DA ESQUERDA: LISTA DE MEMBROS NA CALL DE VOZ
+   ========================================================================== */
+.painel-call {
+    width: 40%;
+    background-color: #111214;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.call-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 12px;
+}
+
+.call-header h2 {
+    font-size: 16px;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.status-call {
+    color: var(--verde-sucesso);
+    font-size: 12px;
+    display: block;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.video-grid {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+#painel-usuarios-call {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Ações Inferiores da Call (Botão Desconectar) */
+.call-actions {
+    margin-top: 15px;
+}
+
+.btn-sair {
+    background-color: var(--vermelho-cancelar);
+    color: #ffffff;
+    border: none;
+    padding: 14px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-sair:hover { 
+    background-color: var(--vermelho-hover); 
+}
+
+.btn-sair:active {
+    transform: scale(0.98);
+}
+
+/* ==========================================================================
+   PAINEL DA DIREITA: HISTÓRICO DE MENSAGENS E INPUT
+   ========================================================================== */
+.painel-texto {
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--fundo-cards);
+    border-left: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.chat-area {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Blocos de Balão de Mensagem (Estilo Discord Moderno) */
+.mensagem-bloco {
+    background-color: rgba(0, 0, 0, 0.12);
+    padding: 12px 16px;
+    border-radius: 4px;
+    border-left: 3px solid var(--blurple);
+    word-break: break-word;
+    animation: deslizarMensagem 0.15s ease-out;
+}
+
+.mensagem-bloco .autor {
+    font-weight: 700;
+    font-size: 13.5px;
+    margin-right: 6px;
+}
+
+.mensagem-bloco .texto {
+    font-size: 13.5px;
+    color: #dbdee1;
+    line-height: 1.4;
+}
+
+/* Barra inferior de digitação */
+.input-area {
+    padding: 20px;
+    background-color: var(--fundo-cards);
+}
+
+.input-area input {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--fundo-inputs);
+    border: none;
+    border-radius: 6px;
+    color: var(--texto-principal);
+    font-size: 14px;
+    outline: none;
+    transition: background-color 0.2s;
+}
+
+.input-area input:focus {
+    background-color: #111214;
+}
+
+/* ==========================================================================
+   COMPORTAMENTO RESPONSIVO PARA SMARTPHONES (MOBILE)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .container-chat {
+        flex-direction: column;
+        height: 88vh;
+        width: 100vw;
+        border-radius: 0; /* Ocupa a tela cheia no celular */
+    }
+    .painel-call {
+        width: 100%;
+        height: 35%;
+        border-bottom: 2px solid var(--fundo-app);
+        padding: 15px;
+    }
+    .painel-texto {
+        width: 100%;
+        height: 65%;
+        border-left: none;
+    }
+    .chat-area {
+        padding: 15px;
+    }
+    .input-area {
+        padding: 15px;
     }
 }

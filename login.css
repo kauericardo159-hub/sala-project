@@ -1,0 +1,114 @@
+/* ==========================================================================
+   INTERFACES DE AUTENTICAÇÃO (LOGIN / REGISTRO)
+   ========================================================================== */
+
+.tela-login-container {
+    background-color: var(--fundo-paineis);
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--borda-fina);
+    animation: suavizarEntrada 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.login-header {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.login-header h2 {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+}
+
+.login-header p {
+    color: var(--texto-secundario);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.formulario-auth {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.formulario-auth label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--texto-secundario);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.formulario-auth input {
+    margin-bottom: 20px;
+}
+
+.login-alternador {
+    color: var(--texto-secundario);
+    font-size: 13px;
+    margin-top: 20px;
+    text-align: left;
+}
+
+.login-alternador span {
+    color: #00aff4;
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.login-alternador span:hover {
+    text-decoration: underline;
+    color: #33bfff;
+}
+
+/* Badge de Identificação embutida no cabeçalho do Lobby */
+.user-badge-perfil {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: var(--fundo-inputs);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 15px;
+    border: 1px solid var(--borda-fina);
+    text-align: left;
+}
+
+.user-badge-perfil .status-indicador {
+    color: var(--verde-sucesso);
+    font-size: 14px;
+    animation: pulsarStatus 2s infinite;
+}
+
+#perfil-tag-usuario {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+#perfil-id-usuario {
+    color: var(--texto-secundario);
+    font-size: 12px;
+    font-family: monospace;
+    margin-left: auto; /* Joga o ID para a extrema direita */
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Animação sutil para o ponto de status online */
+@keyframes pulsarStatus {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}

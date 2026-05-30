@@ -1,5 +1,15 @@
-// Variáveis de controle de estado das salas
+// Variável global de escopo do arquivo para guardar o apelido do usuário logado
 let meuApelido = "";
+
+/**
+ * Função acionada pelo login.js assim que o login é efetuado com sucesso.
+ * Ela ativa a sincronização inicial das salas de forma segura.
+ */
+function iniciarSincronizacaoLobby(username) {
+    meuApelido = username;
+    // Pede a lista atualizada de salas para o servidor
+    socket.emit('pedir-salas');
+}
 
 /**
  * Controla a exibição do campo de senha na criação de canais
@@ -9,7 +19,7 @@ function alternarCampoSenha() {
     const campoSenha = document.getElementById('room-password');
     if (campoSenha) {
         campoSenha.style.display = tipo === 'privada' ? 'block' : 'none';
-        if (tipo !== 'privada') campoSenha.value = ""; // Limpa lixo de digitação
+        if (tipo !== 'privada') campoSenha.value = ""; 
     }
 }
 
@@ -17,28 +27,32 @@ function alternarCampoSenha() {
  * Coleta os dados da interface e solicita a criação de uma nova sala ao servidor
  */
 function criarNovaSala() {
-    const apelidoInput = document.getElementById('username');
     const nomeInput = document.getElementById('new-room-name');
     const tipoSelect = document.getElementById('room-type');
     const senhaInput = document.getElementById('room-password');
 
-    const apelido = apelidoInput.value.trim();
     const nomeSala = nomeInput.value.trim();
     const tipo = tipoSelect.value;
     const senha = senhaInput.value;
 
-    // Validações de segurança no Front-End
-    if (!apelido) return alert("Por favor, escolha um apelido para sua conta antes de continuar.");
-    if (!nomeSala) return alert("O nome da sala não pode ficar em branco.");
-    if (tipo === 'privada' && !senha) return alert("Canais privados precisam de uma senha de acesso.");
+    if (!meuApelido) {
+        return alert("Erro crítico: Você precisa estar autenticado em uma conta para criar canais.");
+    }
+    if (!nomeSala) {
+        return alert("O nome da sala não pode ficar em branco.");
+    }
+    if (tipo === 'privada' && !senha) {
+        return alert("Canais privados exigem a definição de uma senha de acesso.");
+    }
 
-    meuApelido = apelido;
-    
     // Dispara o evento de criação para o servidor Node.js
     socket.emit('criar-sala', { nomeSala, tipo, senha });
+    
+    // Limpa o campo de texto após o disparo
+    nomeInput.value = "";
 }
 
-// Quando o servidor confirma a criação da sala com sucesso, nós entramos nela automaticamente
+// Quando o servidor confirma a criação da sala, solicita automaticamente a entrada nela
 socket.on('sala-criada-sucesso', (nomeSala) => {
     const senha = document.getElementById('room-password').value;
     socket.emit('tentar-entrar', { nomeSala, senha });
@@ -46,31 +60,36 @@ socket.on('sala-criada-sucesso', (nomeSala) => {
 
 /**
  * Escuta as atualizações de salas ativas enviadas pelo servidor e renderiza na tela
+ * Mostra a contagem exata e remove da lista visual as salas que sumirem (ficarem com 0 pessoas)
  */
 socket.on('atualizar-salas', (salas) => {
     const containerLista = document.getElementById('lista-de-salas');
     if (!containerLista) return;
 
-    // Se o array de salas vier limpo do banco/servidor
+    // Se não houver salas abertas no servidor
     if (!salas || salas.length === 0) {
         containerLista.innerHTML = `<p class="txt-vazio">Nenhum canal ativo no momento. Crie o seu acima!</p>`;
         return;
     }
 
-    containerLista.innerHTML = ""; // Limpa a lista antiga para evitar repetições
+    containerLista.innerHTML = ""; // Limpa o painel anterior para renovar os contadores
 
     salas.forEach(sala => {
         const item = document.createElement('div');
         item.className = "sala-item";
         
-        // Define o ícone de privacidade
         const iconeCadeado = sala.tipo === 'privada' ? '🔒' : '🌐';
         
-        // Elemento com as informações da sala
+        // Elemento com as informações da sala e quantidade de pessoas online
         const info = document.createElement('span');
-        info.innerHTML = `<strong>${iconeCadeado} ${sala.id}</strong> <small style="color: #949ba4; margin-left: 5px;">(${sala.participantes} online)</small>`;
+        info.innerHTML = `
+            <strong>${iconeCadeado} ${sala.id}</strong> 
+            <small class="contador-usuarios" style="color: #248046; font-weight: bold; margin-left: 8px;">
+                ● ${sala.participantes} ${sala.participantes === 1 ? 'usuário' : 'usuários'} online
+            </small>
+        `;
         
-        // Botão de ação de entrada
+        // Botão para se juntar à sala específica
         const btnEntrar = document.createElement('button');
         btnEntrar.innerText = "Entrar";
         btnEntrar.className = "btn-entrar-sala";
@@ -83,29 +102,29 @@ socket.on('atualizar-salas', (salas) => {
 });
 
 /**
- * Gerencia o clique no botão entrar e solicita senha se a sala for privada
+ * Gerencia a intenção de entrada e solicita a senha caso o canal seja restrito
  */
 function clicarParaEntrar(nomeSala, tipo) {
-    const apelido = document.getElementById('username').value.trim();
-    if (!apelido) return alert("Digite o seu apelido antes de tentar se conectar a um canal.");
-    
-    meuApelido = apelido;
-    let senha = null;
-
-    if (tipo === 'privada') {
-        senha = prompt(`O canal #${nomeSala} é privado. Digite a senha para entrar:`);
-        if (senha === null) return; // Usuário cancelou o prompt do navegador
+    if (!meuApelido) {
+        return alert("Você precisa efetuar o login antes de acessar um canal.");
     }
 
-    // Solicita autorização de entrada ao servidor
+    let senha = null;
+    if (tipo === 'privada') {
+        senha = prompt(`O canal #${nomeSala} é protegido por senha. Digite a senha para obter acesso:`);
+        if (senha === null) return; // Cancelou o prompt do navegador
+    }
+
+    // Solicita autorização de entrada enviando as credenciais da sala
     socket.emit('tentar-entrar', { nomeSala, senha });
 }
 
-// Resposta do servidor liberando a entrada: Delega o controle para a inicialização do chat.js
+// Resposta do servidor liberando a entrada: Delega o controle para o chat.js passandro o apelido real
 socket.on('entrada-autorizada', (nomeSala) => {
     if (typeof inicializarPainelChatCall === "function") {
+        // Envia o nome do canal e o apelido do usuário logado para amarrar os sockets e peers
         inicializarPainelChatCall(nomeSala, meuApelido);
     } else {
-        console.error("Erro crítico: A função de inicialização do chat/call não foi encontrada.");
+        console.error("Erro do sistema: O módulo de chat/call (chat.js) não foi carregado.");
     }
 });

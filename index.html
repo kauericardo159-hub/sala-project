@@ -5,32 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mini Discord Pro</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="login.css">
 </head>
 <body>
 
     <main id="app-container">
         
-        <section id="tela-salas" class="container">
+        <section id="tela-autenticacao" class="tela-login-container">
+            <header class="login-header">
+                <h2 id="login-titulo">Boas-vindas de volta!</h2>
+                <p id="login-subtitulo">Estamos muito animados em ver você de novo!</p>
+            </header>
+
+            <div class="formulario-auth">
+                <label for="login-username">Nome de usuário (@user)</label>
+                <input type="text" id="login-username" placeholder="Seu @user exclusivo" required>
+                
+                <label for="login-password">Senha</label>
+                <input type="password" id="login-password" placeholder="Sua senha secreta" required>
+                
+                <button class="btn-principal" id="btn-auth-acao" onclick="executarAutenticacao()">Entrar</button>
+            </div>
+
+            <p class="login-alternador" id="txt-alternar-auth">
+                Precisando de uma conta? <span onclick="alternarModoAuth(true)">Registre-se</span>
+            </p>
+        </section>
+        
+        <section id="tela-salas" class="container" style="display: none;">
             <header class="lobby-header">
                 <h1>Mini Discord</h1>
-                <p>Crie ou entre em canais de voz e texto em tempo real</p>
+                <div class="user-badge-perfil">
+                    <span class="status-indicador">●</span>
+                    <span id="perfil-tag-usuario">@username</span>
+                    <span id="perfil-id-usuario">ID: -----</span>
+                </div>
             </header>
-            
-            <div class="card-secao">
-                <label for="username">Seu Apelido</label>
-                <input type="text" id="username" placeholder="Ex: Alex_Dev" required>
-            </div>
 
             <div class="card-secao criacao-sala">
                 <h3>Criar Novo Canal</h3>
-                <input type="text" id="new-room-name" placeholder="Nome do canal (letras minúsculas)">
+                <input type="text" id="new-room-name" placeholder="Nome do canal (ex: dev-room)">
                 
-                <div class="seletor-grupo">
-                    <select id="room-type" onchange="alternarCampoSenha()">
-                        <option value="publica">🌐 Canal Público</option>
-                        <option value="privada">🔒 Canal Privado (Com Senha)</option>
-                    </select>
-                </div>
+                <select id="room-type" onchange="alternarCampoSenha()">
+                    <option value="publica">🌐 Canal Público</option>
+                    <option value="privada">🔒 Canal Privado (Com Senha)</option>
+                </select>
                 
                 <input type="password" id="room-password" placeholder="Defina a senha de acesso" style="display: none;">
                 <button class="btn-principal" onclick="criarNovaSala()">Criar Sala</button>
@@ -49,12 +68,15 @@
             <div class="painel-call">
                 <div class="call-header">
                     <h2 id="nome-sala-titulo">Sala: #geral</h2>
-                    <span id="status-conexao" style="color: #248046; font-size: 12px;">● Conectado à Call</span>
+                    <span class="status-call">🎙️ Call Ativa</span>
                 </div>
+                
                 <div class="video-grid" id="video-grid">
-                    </div>
+                    <div id="painel-usuarios-call"></div>
+                </div>
+                
                 <div class="call-actions">
-                    <button onclick="sairDaSala()" class="btn-sair">Desconectar da Sala</button>
+                    <button onclick="sairDaSala()" class="btn-sair">Desconectar do Canal</button>
                 </div>
             </div>
             
@@ -74,15 +96,19 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <script>
-        // Descobre automaticamente se deve conectar no Render ou no Localhost (Acode/Termux)
+        // Mapeia dinamicamente a URL de produção do Render ou ambiente local (Acode/Termux)
         const urlServidor = window.location.hostname.includes("github.io") 
             ? "https://sala-project.onrender.com" 
             : window.location.origin;
 
-        // Inicializa o Socket Globalmente para os outros arquivos usarem
+        // Inicialização do canal de comunicação bi-direcional estável
         const socket = io(urlServidor);
+        
+        // Tratamento global de falhas críticas vindas do Back-End
+        socket.on('erro', (mensagemServidor) => alert("⚠️ Erro: " + mensagemServidor));
     </script>
 
+    <script src="login.js"></script>
     <script src="salas.js"></script>
     <script src="chat.js"></script>
 </body>
