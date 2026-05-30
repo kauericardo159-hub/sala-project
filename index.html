@@ -18,8 +18,8 @@
             </div>
 
             <div class="auth-tabs">
-                <button id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Entrar</button>
-                <button id="tab-register" class="tab-btn" onclick="switchAuthTab('register')">Criar Conta</button>
+                <button id="tab-login" class="tab-btn active">Entrar</button>
+                <button id="tab-register" class="tab-btn">Criar Conta</button>
             </div>
 
             <div class="auth-form-container">
@@ -41,7 +41,7 @@
                     <input type="password" id="login-password" placeholder="••••••••">
                 </div>
 
-                <button id="btn-auth-submit" class="btn-primary full-width" onclick="processAuth()">
+                <button id="btn-auth-submit" class="btn-primary full-width">
                     Entrar com Segurança
                 </button>
             </div>
@@ -86,7 +86,7 @@
                     <div class="input-row">
                         <div class="input-group">
                             <label>Privacidade</label>
-                            <select id="room-type-select" onchange="togglePasswordVisibility(this.value)">
+                            <select id="room-type-select">
                                 <option value="public">Pública 🔓</option>
                                 <option value="private">Privada 🔒</option>
                             </select>
@@ -121,8 +121,7 @@
                     </div>
                 </header>
 
-                <div id="rooms-live-list" class="rooms-grid-container">
-                    </div>
+                <div id="rooms-live-list" class="rooms-grid-container"></div>
             </main>
         </div>
 
@@ -142,8 +141,7 @@
                     </div>
                 </header>
 
-                <div id="voice-cards-container" class="voice-subscribers-grid">
-                    </div>
+                <div id="voice-cards-container" class="voice-subscribers-grid"></div>
 
                 <footer class="voice-dock-controls">
                     <button id="btn-mic" class="btn-success status-dock-btn" onclick="toggleMicrophone()">
@@ -160,8 +158,7 @@
                     <h3>Bate-papo de Texto</h3>
                 </div>
 
-                <div id="chat-area" class="chat-viewport">
-                    </div>
+                <div id="chat-area" class="chat-viewport"></div>
 
                 <footer class="chat-input-wrapper">
                     <button class="chat-addon-btn" title="Enviar arquivos de mídia" onclick="alert('Selecione arquivos em breve!')">
@@ -177,47 +174,6 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    
-    <script>
-        let currentAuthMode = 'login';
-
-        function switchAuthTab(mode) {
-            currentAuthMode = mode;
-            const tabLogin = document.getElementById('tab-login');
-            const tabRegister = document.getElementById('tab-register');
-            const groupDisplayName = document.getElementById('group-displayname');
-            const btnSubmit = document.getElementById('btn-auth-submit');
-            const subtitle = document.getElementById('auth-subtitle');
-
-            if (mode === 'login') {
-                tabLogin.classList.add('active');
-                tabRegister.classList.remove('active');
-                groupDisplayName.style.display = 'none';
-                btnSubmit.innerText = 'Entrar com Segurança';
-                subtitle.innerText = 'De volta ao ecossistema? Faça seu login.';
-            } else {
-                tabRegister.classList.add('active');
-                tabLogin.classList.remove('active');
-                groupDisplayName.style.display = 'block';
-                btnSubmit.innerText = 'Criar Nova Conta';
-                subtitle.innerText = 'Crie uma credencial única e defina seu perfil.';
-            }
-        }
-
-        function togglePasswordVisibility(value) {
-            const container = document.getElementById('room-password-container');
-            container.style.display = value === 'private' ? 'block' : 'none';
-        }
-
-        // Intercepta a autenticação para enviar ao script principal
-        function processAuth() {
-            if (typeof loginOrCreateAccount === "function") {
-                loginOrCreateAccount(currentAuthMode);
-            } else {
-                console.error("Função de autenticação não encontrada no script.js");
-            }
-        }
-    </script>
     <script src="script.js"></script>
 </body>
 </html>

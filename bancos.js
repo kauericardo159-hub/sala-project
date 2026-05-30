@@ -1,18 +1,86 @@
-// bancos.js - Gerenciador de Dados Temporal (Em Memória) do Chat — Alpha Version
+// bancos.js - Gerenciador de Dados Temporal (Em Memória) — Alpha Version
 
-// Armazenamento estruturado das salas ativas e controle de acessos
 const bancoDados = {
-    rooms: [],        // Lista de todas as salas criadas [{ id, name, type, password, limit, ownerId, users: [] }]
-    bannedUsers: {},  // Registro de banimentos por sala { roomId: [uid1, uid2] }
+    rooms: [],        // [{ id, name, type, password, limit, ownerId, users: [] }]
+    bannedUsers: {},  // { roomId: [uid1, uid2] }
+    accounts: {},     // Novo: Guarda as contas cadastradas do sistema { "@username": { uid, name, avatar, password } }
+    userCounter: 0    // Novo: Contador para gerar o número fixo e permanente do UID (#000001, #000002...)
 };
 
 const BancoController = {
 
     // ==========================================
+    // NOVO: SISTEMA CENTRAL DE CONTAS E AUTENTICAÇÃO
+    // ==========================================
+
+    // Registra uma nova conta fixando o UID permanente de forma estrita
+    registerAccount(username, displayName, password) {
+        const formattedUsername = `@${username.toLowerCase().replace(/\s/g, '')}`;
+        
+        // Verifica se a conta já existe no servidor
+        if (bancoDados.accounts[formattedUsername]) {
+            return { success: false, message: "Este @username já está sendo utilizado!" };
+        }
+
+        // Incrementa o contador e gera o formato #000001, #000002...
+        bancoDados.userCounter++;
+        const formattedNumber = String(bancoDados.userCounter).padStart(6, '0');
+        const permanentUid = `${formattedUsername}#${formattedNumber}`;
+
+        const newAccount = {
+            uid: permanentUid,
+            username: formattedUsername,
+            name: displayName,
+            avatar: "user-photo.jpg",
+            password: password
+        };
+
+        // Salva na memória global do servidor
+        bancoDados.accounts[formattedUsername] = newAccount;
+        console.log(`[CONTA CRIADA] ${permanentUid} cadastrada com sucesso.`);
+
+        // Retorna a conta omitindo a senha para segurança
+        const { password: _, ...safeAccount } = newAccount;
+        return { success: true, user: safeAccount };
+    },
+
+    // Autentica (Entra) em uma conta existente direto no servidor
+    loginAccount(username, password) {
+        const formattedUsername = username.startsWith('@') ? username.toLowerCase() : `@${username.toLowerCase()}`;
+        const account = bancoDados.accounts[formattedUsername];
+
+        if (!account) {
+            return { success: false, message: "Esta conta não foi encontrada no servidor!" };
+        }
+
+        if (account.password !== password) {
+            return { success: false, message: "Senha incorreta!" };
+        }
+
+        // Retorna os dados com sucesso
+        const { password: _, ...safeAccount } = account;
+        return { success: true, user: safeAccount };
+    },
+
+    // Permite que o usuário mude o nome de exibição ou avatar no servidor
+    updateAccountProfile(uid, newName, newAvatar) {
+        // Encontra a conta associada vasculhando pelo UID permanente
+        const usernameKey = Object.keys(bancoDados.accounts).find(
+            key => bancoDados.accounts[key].uid === uid
+        );
+
+        if (usernameKey) {
+            if (newName) bancoDados.accounts[usernameKey].name = newName;
+            if (newAvatar) bancoDados.accounts[usernameKey].avatar = newAvatar;
+            return bancoDados.accounts[usernameKey];
+        }
+        return null;
+    },
+
+    // ==========================================
     // OPERAÇÕES DE GERENCIAMENTO DE SALAS
     // ==========================================
 
-    // Retorna todas as salas existentes ocultando senhas por segurança antes do envio ao front
     getPublicRoomsList() {
         return bancoDados.rooms.map(room => {
             const { password, ...roomWithoutPassword } = room;
@@ -20,15 +88,12 @@ const BancoController = {
         });
     },
 
-    // Cria uma nova sala preservando os dados iniciais do criador enviados pelo payload
     createRoom(roomPayload) {
         const exists = bancoDados.rooms.find(r => r.id === roomPayload.id);
         if (!exists) {
-            // Se o payload não trouxer usuários configurados, inicializa o array vazio
             if (!roomPayload.users || !Array.isArray(roomPayload.users)) {
                 roomPayload.users = [];
             }
-            
             bancoDados.rooms.push(roomPayload);
             bancoDados.bannedUsers[roomPayload.id] = [];
             return roomPayload;
@@ -36,17 +101,15 @@ const BancoController = {
         return null;
     },
 
-    // Busca uma sala específica de forma direta pelo ID único
     findRoomById(roomId) {
         return bancoDados.rooms.find(r => r.id === roomId);
     },
 
-    // Deleta uma sala do sistema (Ação destrutiva do Dono/Owner)
     deleteRoom(roomId) {
         const index = bancoDados.rooms.findIndex(r => r.id === roomId);
         if (index !== -1) {
             bancoDados.rooms.splice(index, 1);
-            delete bancoDados.bannedUsers[roomId]; // Limpa o lixo de memória dos bans daquela sala específica
+            delete bancoDados.bannedUsers[roomId];
             return true;
         }
         return false;
@@ -56,37 +119,30 @@ const BancoController = {
     // OPERAÇÕES DE PARTICIPANTES (VOZ E PRESENÇA)
     // ==========================================
 
-    // Adiciona e valida novos usuários ao tentar entrar em uma sala ativa
     addUserToRoom(roomId, user) {
         const room = this.findRoomById(roomId);
-        if (!room) return { success: false, message: "Esta sala não existe mais ou foi encerrada." };
+        if (!room) return { success: false, message: "Esta sala não existe mais." };
         
-        // Validação de segurança: Verifica se o UID consta na lista negra (banidos) da sala
         if (bancoDados.bannedUsers[roomId] && bancoDados.bannedUsers[roomId].includes(user.uid)) {
-            return { success: false, message: "Você foi banido desta sala pelo proprietário e não pode retornar." };
+            return { success: false, message: "Você foi banido desta sala." };
         }
 
-        // Validação de infraestrutura: Limite máximo configurado na criação do espaço
         if (room.users.length >= room.limit) {
-            return { success: false, message: "A sala atingiu o limite máximo de participantes!" };
+            return { success: false, message: "A sala atingiu o limite máximo!" };
         }
 
-        // Previne clonagem ou conexões duplicadas do mesmo UID no mesmo espaço
         const userExists = room.users.find(u => u.uid === user.uid);
         if (!userExists) {
-            // Garante os estados iniciais de comunicação zerados de forma limpa
             user.micOn = user.micOn !== undefined ? user.micOn : false;
             user.isSpeaking = false;
             room.users.push(user);
         } else {
-            // Se ele já existia (ex: reconexão rápida), apenas atualiza o socket ID de comunicação
             userExists.socketId = user.socketId;
         }
 
         return { success: true, room };
     },
 
-    // Remove um usuário específico baseado no UID (Sair voluntariamente ou Expulsão)
     removeUserFromRoom(roomId, uid) {
         const room = this.findRoomById(roomId);
         if (room) {
@@ -96,44 +152,26 @@ const BancoController = {
         return null;
     },
 
-    // Varre todas as salas para limpar conexões órfãs (Quedas de internet / Fechamento de abas)
     removeUserFromAllRooms(socketId) {
         let updatedRoom = null;
         bancoDados.rooms.forEach(room => {
             const userIndex = room.users.findIndex(u => u.socketId === socketId);
             if (userIndex !== -1) {
                 room.users.splice(userIndex, 1);
-                updatedRoom = room; // Retorna a referência da sala modificada para alertar os outros via socket
+                updatedRoom = room;
             }
         });
         return updatedRoom;
     },
 
-    // Sincroniza em tempo real se o microfone está ativo ou mutado no front-end
     updateUserMic(roomId, uid, micOn) {
         const room = this.findRoomById(roomId);
         if (room) {
             const user = room.users.find(u => u.uid === uid);
             if (user) {
                 user.micOn = micOn;
-                return room.users; // Retorna a lista atualizada para transmissão em massa
+                return room.users;
             }
-        }
-        return null;
-    },
-
-    // ==========================================
-    // SISTEMA DE SEGURANÇA E MODERAÇÃO
-    // ==========================================
-
-    // Aplica restrição permanente no UID para que ele não consiga burlar o sistema e reentrar
-    banUserFromRoom(roomId, uid) {
-        if (bancoDados.bannedUsers[roomId]) {
-            if (!bancoDados.bannedUsers[roomId].includes(uid)) {
-                bancoDados.bannedUsers[roomId].push(uid);
-            }
-            // Remove o usuário imediatamente do array ativo para desconectá-lo
-            return this.removeUserFromRoom(roomId, uid);
         }
         return null;
     }

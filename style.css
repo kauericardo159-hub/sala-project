@@ -1,72 +1,182 @@
 /* ==========================================================================
-   VARIÁVEIS DE DESIGN (PALETA PREMIUM DARK)
+   CONFIGURAÇÕES GERAIS E VARIÁVEIS DE DESIGN (SISTEMA ALFA)
    ========================================================================== */
 :root {
-    --bg-darkest: #0b0c0e;
-    --bg-main: #111214;
-    --bg-panel: #1e1f22;
-    --bg-light-panel: #2b2d31;
-    --accent: #5865f2;
-    --accent-hover: #4752c4;
-    --accent-glow: rgba(88, 101, 242, 0.35);
-    --success: #23a55a;
-    --success-glow: rgba(35, 165, 90, 0.4);
-    --danger: #f23f43;
-    --danger-glow: rgba(242, 63, 67, 0.3);
-    --text-primary: #f2f3f5;
-    --text-muted: #949ba4;
-    --border-color: rgba(255, 255, 255, 0.06);
-    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --bg-main: #0b0e14;
+    --bg-card: #151922;
+    --bg-input: #1e2430;
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --success: #10b981;
+    --success-hover: #059669;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border-color: #2d3748;
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --font-sans: 'Inter', sans-serif;
+    --transition: all 0.25s ease-in-out;
 }
 
-/* ==========================================================================
-   RESETS E CONFIGURAÇÕES GERAIS
-   ========================================================================== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
 }
 
 body {
-    background-color: var(--bg-darkest);
-    color: var(--text-primary);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
+    background-color: var(--bg-main);
+    color: var(--text-main);
     overflow: hidden;
+    height: 100vh;
+    width: 100vw;
 }
 
-/* Container mestre limitado para manter o visual de WebApp */
+/* Container Mestre */
 .app-wrapper {
     width: 100%;
-    max-width: 1280px;
-    height: 90vh;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 /* ==========================================================================
-   COMPONENTES GLOBAIS REUTILIZÁVEIS
+   COMPONENTES REUTILIZÁVEIS E BOTÕES
    ========================================================================== */
+button {
+    cursor: pointer;
+    border: none;
+    outline: none;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: #fff;
+    padding: 12px 24px;
+}
+.btn-primary:hover { background-color: var(--primary-hover); }
+
+.btn-success {
+    background-color: var(--success);
+    color: #fff;
+    padding: 12px 24px;
+}
+.btn-success:hover { background-color: var(--success-hover); }
+
+.btn-danger {
+    background-color: var(--danger);
+    color: #fff;
+    padding: 12px 24px;
+}
+.btn-danger:hover { background-color: var(--danger-hover); }
+
+.btn-danger-text {
+    background: transparent;
+    color: var(--danger);
+    padding: 12px;
+}
+.btn-danger-text:hover { background: rgba(239, 68, 68, 0.1); }
+
+.full-width { width: 100%; }
+
+/* Inputs Padrão */
 .input-group {
-    margin-bottom: 18px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    width: 100%;
+    margin-bottom: 14px;
 }
 
 .input-group label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 600;
     color: var(--text-muted);
+    text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select {
+    width: 100%;
+    padding: 12px 16px;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    font-size: 14px;
+    transition: var(--transition);
+}
+
+input:focus, select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* ==========================================================================
+   1. TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO)
+   ========================================================================== */
+.auth-card {
+    background-color: var(--bg-card);
+    width: 100%;
+    max-width: 420px;
+    padding: 32px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    flex-direction: column;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.auth-header h2 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+}
+
+.auth-header p {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.auth-tabs {
+    display: flex;
+    background-color: var(--bg-input);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+}
+
+.tab-btn {
+    flex: 1;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 10px;
+    font-size: 14px;
+}
+
+.tab-btn.active {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .input-wrapper {
@@ -80,147 +190,23 @@ body {
     left: 14px;
     color: var(--text-muted);
     font-weight: 600;
-    font-size: 14px;
 }
 
-.input-wrapper input {
-    padding-left: 32px;
-}
-
-input, select {
-    width: 100%;
-    padding: 12px 14px;
-    background: var(--bg-panel);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    color: #fff;
-    font-size: 14px;
-    transition: var(--transition-smooth);
-}
-
-input:focus, select:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: var(--bg-light-panel);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-}
-
-/* Botões estruturais */
-button {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: var(--transition-smooth);
-}
-
-.full-width { width: 100%; }
-
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 15px var(--accent-glow); }
-
-.btn-success { background: var(--success); color: #fff; }
-.btn-success:hover { box-shadow: 0 4px 15px var(--success-glow); filter: brightness(1.1); }
-
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { box-shadow: 0 4px 15px var(--danger-glow); filter: brightness(1.1); }
-
-.btn-danger-text { background: transparent; color: var(--danger); }
-.btn-danger-text:hover { background: rgba(242, 63, 67, 0.1); }
-
-.inline-action-input {
-    display: flex;
-    gap: 8px;
-}
-
-.icon-btn {
-    padding: 0 14px;
-    font-size: 16px;
-}
+.input-wrapper input { padding-left: 32px; }
 
 /* ==========================================================================
-   1. NOVA INTERFACE DE LOGIN (ESTILO ABAS)
-   ========================================================================== */
-.auth-card {
-    width: 100%;
-    max-width: 440px;
-    background: var(--bg-main);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 40px 32px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-    display: flex;
-    flex-direction: column;
-}
-
-.auth-header {
-    text-align: center;
-    margin-bottom: 24px;
-}
-
-.auth-header h2 {
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #fff 40%, var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.auth-header p {
-    color: var(--text-muted);
-    font-size: 13px;
-    margin-top: 6px;
-}
-
-/* Seletor de abas */
-.auth-tabs {
-    display: flex;
-    background: var(--bg-panel);
-    padding: 4px;
-    border-radius: 8px;
-    margin-bottom: 24px;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 10px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 13px;
-    border-radius: 6px;
-}
-
-.tab-btn.active {
-    background: var(--bg-light-panel);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-/* ==========================================================================
-   2. DASHBOARD / GRID PRINCIPAL DA HOME
+   2. TELA DASHBOARD / HOME (FEED DE SALAS E SIDEBAR)
    ========================================================================== */
 .dashboard-layout {
     width: 100%;
-    height: 100%;
-    background: var(--bg-main);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
+    height: 100vh;
     display: grid;
     grid-template-columns: 320px 1fr;
-    overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
 }
 
-/* Barra Lateral de Perfil */
+/* Barra Lateral Esquerda */
 .sidebar-user {
-    background: var(--bg-panel);
+    background-color: var(--bg-card);
     border-right: 1px solid var(--border-color);
     padding: 24px;
     display: flex;
@@ -235,16 +221,16 @@ button {
     align-items: center;
     text-align: center;
     gap: 12px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-/* Upload e Preview do Avatar */
 .avatar-edit-container {
     position: relative;
-    width: 96px;
-    height: 96px;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
     overflow: hidden;
-    border: 3px solid var(--bg-light-panel);
 }
 
 .user-main-avatar {
@@ -255,349 +241,276 @@ button {
 
 .avatar-hover-trigger {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.65);
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     cursor: pointer;
-    transition: var(--transition-smooth);
+    transition: var(--transition);
 }
 
-.avatar-hover-trigger span {
-    font-size: 12px;
-    font-weight: 700;
-    color: #fff;
-    text-transform: uppercase;
-}
-
-.avatar-edit-container:hover .avatar-hover-trigger {
-    opacity: 1;
-}
-
+.avatar-edit-container:hover .avatar-hover-trigger { opacity: 1; }
+.avatar-hover-trigger span { font-size: 12px; font-weight: 700; color: #fff; }
 #avatar-input { display: none; }
 
-.user-meta h3 {
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.user-tag-badge {
-    display: inline-block;
-    font-size: 12px;
-    color: var(--text-muted);
-    background: var(--bg-darkest);
-    padding: 2px 8px;
-    border-radius: 12px;
-    margin-top: 4px;
-}
+.user-meta h3 { font-size: 18px; font-weight: 700; }
+.user-tag-badge { font-size: 13px; color: var(--primary); font-weight: 600; }
 
 .config-panel {
-    background: rgba(0, 0, 0, 0.15);
+    background: var(--bg-input);
     padding: 16px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
 }
 
 .config-panel h4 {
-    font-size: 12px;
+    font-size: 13px;
     text-transform: uppercase;
     color: var(--text-muted);
     margin-bottom: 12px;
     letter-spacing: 0.5px;
 }
 
-.input-row {
+.inline-action-input {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
-.input-row .input-group { flex: 1; }
 
-/* Feed de Salas */
+.icon-btn { padding: 0 14px; font-size: 16px; }
+
+.input-row { display: flex; gap: 10px; }
+
+/* Feed de Salas Principal */
 .main-rooms-feed {
+    padding: 40px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    padding: 32px;
-    overflow-y: auto;
+    gap: 32px;
 }
 
 .feed-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 28px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 16px;
 }
 
-.feed-title h2 { font-size: 24px; font-weight: 800; }
-.feed-title p { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
+.feed-title h2 { font-size: 26px; font-weight: 800; }
+.feed-title p { color: var(--text-muted); font-size: 14px; }
 
 .live-status-indicator {
-    background: rgba(35, 165, 90, 0.1);
+    background: rgba(16, 185, 129, 0.1);
     color: var(--success);
-    padding: 6px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
-    font-size: 12px;
     font-weight: 700;
+    font-size: 13px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .pulse-dot {
-    width: 8px;
-    height: 8px;
-    background: var(--success);
+    width: 8px; height: 8px;
+    background-color: var(--success);
     border-radius: 50%;
-    animation: pulse 1.8s infinite;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse 1.6s infinite;
 }
 
 @keyframes pulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(35, 165, 90, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(35, 165, 90, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(35, 165, 90, 0); }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* Grid de Cards de Salas */
 .rooms-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    gap: 20px;
 }
 
-.no-rooms-notice {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-muted);
-    font-style: italic;
-    background: rgba(0,0,0,0.1);
-    border-radius: 12px;
-    border: 1px dashed var(--border-color);
-}
-
+/* Card Individual de Sala */
 .room-card {
-    background: var(--bg-panel);
+    background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
     padding: 20px;
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 16px;
-    transition: var(--transition-smooth);
+    transition: var(--transition);
 }
 
 .room-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    border-color: var(--primary);
 }
 
-.room-card-info {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.room-card-title {
-    font-size: 16px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+.room-card-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
 
 .room-badge {
     align-self: flex-start;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    padding: 3px 8px;
+    padding: 4px 8px;
     border-radius: 4px;
+    text-transform: uppercase;
 }
-.room-badge.public { background: rgba(35, 165, 90, 0.12); color: var(--success); }
-.room-badge.private { background: rgba(242, 63, 67, 0.12); color: var(--danger); }
+.room-badge.public { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.room-badge.private { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
 
-.room-count {
-    font-size: 13px;
+.room-count { font-size: 13px; color: var(--text-muted); }
+
+.no-rooms-notice {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
     color: var(--text-muted);
-    margin-top: 4px;
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-lg);
 }
 
-/* ==========================================================================
-   3. ARQUITETURA INTERNA DA SALA (VOZ + CHAT)
-   ========================================================================== */
+/* ==========================================
+   3. TELA INTERNA DA SALA (VOZ E TEXTO)
+   ========================================== */
 .room-layout {
     width: 100%;
-    height: 100%;
-    background: var(--bg-main);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
+    height: 100vh;
     display: grid;
     grid-template-columns: 1fr 360px;
-    overflow: hidden;
 }
 
-/* Lado Esquerdo: Área de Voz */
+/* Workspace de Voz (Esquerda) */
 .voice-workspace {
+    background-color: var(--bg-main);
     display: flex;
     flex-direction: column;
-    padding: 24px;
-    background: var(--bg-main);
-    border-right: 1px solid var(--border-color);
+    height: 100%;
 }
 
 .room-workspace-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-card);
 }
 
-.room-identity {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+.room-identity { display: flex; align-items: center; gap: 8px; }
+.room-identity .hash-tag { font-size: 24px; color: var(--primary); font-weight: 800; }
+#room-title { font-size: 20px; font-weight: 700; }
 
-.room-identity .hash-tag {
-    font-size: 24px;
-    font-weight: 500;
-    color: var(--text-muted);
-}
-
-.room-identity h2 { font-size: 20px; font-weight: 700; }
-
-.room-action-controls {
-    display: flex;
-    gap: 8px;
-}
-
+.room-action-controls { display: flex; gap: 12px; }
 .btn-danger.outline {
     background: transparent;
     border: 1px solid var(--danger);
     color: var(--danger);
 }
-.btn-danger.outline:hover {
-    background: var(--danger);
-    color: #fff;
-}
+.btn-danger.outline:hover { background: var(--danger); color: #fff; }
 
-/* Grid de Participantes */
 .voice-subscribers-grid {
-    flex-grow: 1;
+    flex: 1;
+    padding: 24px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-auto-rows: max-content;
     gap: 16px;
     overflow-y: auto;
-    align-content: flex-start;
-    padding: 4px;
 }
 
-/* Card de Voz com Animação de Detecção */
+/* Card do Participante de Voz */
 .voice-card {
-    background: var(--bg-panel);
+    background: var(--bg-card);
     border: 2px solid transparent;
-    border-radius: 12px;
-    padding: 20px 12px;
+    border-radius: var(--radius-lg);
+    padding: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     position: relative;
-    transition: var(--transition-smooth);
+    gap: 10px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-/* Estado Ativo: Usuário Falando */
+/* Efeito Glow Verde Alvo se estiver Falando */
 .voice-card.speaking {
     border-color: var(--success);
-    box-shadow: 0 0 16px var(--success-glow);
-    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
 }
 
 .voice-avatar {
-    width: 100%;
-    height: 100%;
+    width: 70px; height: 70px;
     border-radius: 50%;
     object-fit: cover;
+    background: var(--bg-input);
 }
 
-/* Pequena luz indicadora de microfone mutado/ativo */
+/* Indicador Dot do Mic no canto da foto */
 .mic-indicator-dot {
     position: absolute;
     bottom: 2px;
     right: 2px;
-    width: 14px;
-    height: 14px;
+    width: 14px; height: 14px;
     border-radius: 50%;
-    border: 2px solid var(--bg-panel);
+    border: 2px solid var(--bg-card);
 }
-.mic-indicator-dot.on { background: var(--success); }
-.mic-indicator-dot.off { background: var(--danger); }
+.mic-indicator-dot.on { background-color: var(--success); }
+.mic-indicator-dot.off { background-color: var(--danger); }
 
-.voice-info { margin-top: 10px; width: 100%; }
-.voice-name { font-weight: 700; font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.voice-user-tag { font-size: 11px; color: var(--text-muted); display: block; }
+.voice-info { display: flex; flex-direction: column; }
+.voice-name { font-size: 14px; font-weight: 700; }
+.voice-user-tag { font-size: 11px; color: var(--text-muted); }
 
 .badge-role {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 6px;
-    background: var(--bg-light-panel);
-    border-radius: 4px;
-    margin-top: 8px;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px;
+    background: var(--bg-input);
+    color: var(--text-muted);
 }
-.badge-role.owner { background: rgba(240, 178, 50, 0.15); color: #f0b232; }
+.badge-role.owner { background: rgba(79, 70, 229, 0.2); color: #93c5fd; }
 
 .btn-kick-action {
-    background: rgba(242, 63, 67, 0.1);
-    color: var(--danger);
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    margin-top: 12px;
-    width: 100%;
+    font-size: 11px; background: rgba(239, 68, 68, 0.1);
+    color: var(--danger); padding: 4px 8px; border-radius: 6px;
+    margin-top: 4px; width: 100%;
 }
 .btn-kick-action:hover { background: var(--danger); color: #fff; }
 
-/* Painel de Controle Fixo Inferior */
+/* Console de Controle Inferior (Dock) */
 .voice-dock-controls {
-    background: var(--bg-panel);
-    padding: 14px 20px;
-    border-radius: 12px;
-    margin-top: 16px;
+    background: var(--bg-card);
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: center;
-    gap: 12px;
+    gap: 16px;
 }
 
-.status-dock-btn {
-    min-width: 160px;
-}
+.status-dock-btn { min-width: 160px; padding: 14px; }
 
-/* Lado Direito: Chat Integrado */
+/* Workspace de Chat Integrado (Direita) */
 .text-workspace {
-    background: var(--bg-panel);
+    background-color: var(--bg-card);
+    border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .workspace-chat-header {
-    padding: 22px 20px;
+    padding: 24px;
     border-bottom: 1px solid var(--border-color);
 }
 .workspace-chat-header h3 { font-size: 16px; font-weight: 700; }
 
 .chat-viewport {
-    flex-grow: 1;
+    flex: 1;
     padding: 20px;
     overflow-y: auto;
     display: flex;
@@ -605,96 +518,59 @@ button {
     gap: 16px;
 }
 
-/* Renderização das Mensagens */
+/* Balões do Bate-papo */
 .message-item {
     display: flex;
     gap: 12px;
-    animation: fadeIn 0.2s ease;
+    max-width: 85%;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+.message-item.my-message {
+    align-self: flex-end;
+    flex-direction: row-reverse;
 }
 
-.chat-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
+.message-item.other-message { align-self: flex-start; }
+
+.chat-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+
+.message-content {
+    background-color: var(--bg-input);
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
 }
+.my-message .message-content { background-color: var(--primary); }
 
-.message-content { flex: 1; }
-.message-header { display: flex; align-items: baseline; gap: 6px; }
-.chat-name { font-weight: 700; font-size: 13.5px; }
-.chat-tag, .chat-time { font-size: 11px; color: var(--text-muted); }
-.chat-text { font-size: 14px; color: #dbdee1; margin-top: 2px; line-height: 1.4; word-break: break-word; }
+.message-header { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.chat-name { font-size: 12px; font-weight: 700; }
+.chat-tag { font-size: 10px; color: var(--text-muted); }
+.my-message .chat-tag { color: #c7d2fe; }
+.chat-time { font-size: 10px; color: var(--text-muted); margin-left: auto; }
 
-/* Avisos automáticos do sistema */
+.chat-text { font-size: 13px; line-height: 1.4; word-break: break-word; }
+
+.message-item.system-message {
+    align-self: center;
+    max-width: 100%;
+}
 .sys-msg-inside {
-    width: 100%;
-    text-align: center;
-    font-size: 12px;
+    background: rgba(255,255,255,0.04);
+    font-size: 11px;
     color: var(--text-muted);
-    padding: 4px 0;
+    padding: 4px 12px;
+    border-radius: 12px;
 }
 
-/* Barra de Entrada de Texto */
+/* Input do Chat Barra Inferior */
 .chat-input-wrapper {
-    padding: 20px;
-    background: var(--bg-main);
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
     display: flex;
-    align-items: center;
     gap: 10px;
 }
 
-.chat-addon-btn {
-    background: var(--bg-light-panel);
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 14px;
-}
-.chat-addon-btn:hover { background: #3f4248; }
+.chat-addon-btn { background: var(--bg-input); color: var(--text-muted); padding: 0 14px; border-radius: var(--radius-md); }
+.chat-addon-btn:hover { color: #fff; }
 
-.chat-send-btn {
-    background: var(--accent);
-    color: #fff;
-}
-
-/* ==========================================================================
-   RESPONSIVIDADE E ADAPTAÇÃO MOBILE
-   ========================================================================== */
-@media (max-width: 992px) {
-    body { padding: 8px; }
-    .app-wrapper { height: 96vh; }
-    
-    #screen-home {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
-    }
-    .sidebar-user {
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
-        height: auto;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .user-profile-widget { flex-direction: row; text-align: left; }
-    .avatar-edit-container { width: 54px; height: 54px; }
-    .config-panel { display: none; } /* Oculta ferramentas secundárias no mobile home */
-    .btn-danger-text { width: auto; }
-
-    #screen-room {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr 320px;
-    }
-    .voice-workspace { border-right: none; border-bottom: 1px solid var(--border-color); }
-}
-
-@media (max-width: 480px) {
-    .auth-card { padding: 24px 16px; }
-    .sidebar-user { flex-direction: column; align-items: stretch; }
-    .voice-dock-controls { flex-direction: column; }
-    .status-dock-btn { width: 100%; }
-}
+.chat-send-btn { background-color: var(--primary); color: #fff; padding: 0 16px; }
+.chat-send-btn:hover { background-color: var(--primary-hover); }

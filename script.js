@@ -10,81 +10,118 @@ let localStream = null;
 let audioContext = null;
 let audioAnalyser = null;
 let micInterval = null;
-
-// Elementos das Telas Principais
-const screenLogin = document.getElementById("screen-login");
-const screenHome = document.getElementById("screen-home");
-const screenRoom = document.getElementById("screen-room");
+let currentAuthMode = "login"; // 'login' ou 'register'
 
 // ==========================================
-// 1. EVENTO INICIAL (PERSISTÊNCIA DE SESSÃO)
+// 1. INICIALIZAÇÃO E CONTROLE DAS ABAS DO HTML
 // ==========================================
 window.addEventListener("DOMContentLoaded", () => {
+    // Força a exibição imediata da tela de login para evitar tela escura de carregamento
+    showScreen("login");
+
+    // Configura listeners das abas de login
+    setupAuthInterface();
+
+    // Monitora o seletor de privacidade de salas para exibir/ocultar o campo de senha
+    const roomTypeSelect = document.getElementById("room-type-select");
+    if (roomTypeSelect) {
+        roomTypeSelect.addEventListener("change", (e) => {
+            const container = document.getElementById("room-password-container");
+            if (container) container.style.display = e.target.value === "private" ? "block" : "none";
+        });
+    }
+
+    // Gerenciador de Persistência de conta
     const savedUser = localStorage.getItem("sala_project_user");
     if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        initHome();
-    } else {
-        showScreen("login");
+        try {
+            currentUser = JSON.parse(savedUser);
+            // Envia credenciais para reautenticação no servidor
+            socket.emit("submit_login", { 
+                username: currentUser.uid.split('#')[0], 
+                password: currentUser.password_backup 
+            });
+        } catch (e) {
+            localStorage.removeItem("sala_project_user");
+            showScreen("login");
+        }
     }
 });
 
+// Configura os gatilhos visuais das abas sem misturar códigos inline
+function setupAuthInterface() {
+    const tabLogin = document.getElementById("tab-login");
+    const tabRegister = document.getElementById("tab-register");
+    const groupDisplayName = document.getElementById("group-displayname");
+    const btnAuthSubmit = document.getElementById("btn-auth-submit");
+    const authSubtitle = document.getElementById("auth-subtitle");
+
+    if (tabLogin && tabRegister) {
+        tabLogin.addEventListener("click", () => {
+            currentAuthMode = "login";
+            tabLogin.classList.add("active");
+            tabRegister.classList.remove("active");
+            if (groupDisplayName) groupDisplayName.style.display = "none";
+            if (btnAuthSubmit) btnAuthSubmit.innerText = "Entrar com Segurança";
+            if (authSubtitle) authSubtitle.innerText = "De volta ao ecossistema? Faça seu login.";
+        });
+
+        tabRegister.addEventListener("click", () => {
+            currentAuthMode = "register";
+            tabRegister.classList.add("active");
+            tabLogin.classList.remove("active");
+            if (groupDisplayName) groupDisplayName.style.display = "block";
+            if (btnAuthSubmit) btnAuthSubmit.innerText = "Criar Nova Conta";
+            if (authSubtitle) authSubtitle.innerText = "Crie uma credencial única e defina seu perfil.";
+        });
+    }
+
+    if (btnAuthSubmit) {
+        btnAuthSubmit.addEventListener("click", () => {
+            loginOrCreateAccount();
+        });
+    }
+}
+
 // ==========================================
-// 2. SISTEMA DE AUTENTICAÇÃO (ENTRAR vs REGISTRAR)
+// 2. LOGICA CENTRAL DE AUTENTICAÇÃO
 // ==========================================
-function loginOrCreateAccount(mode) {
+function loginOrCreateAccount() {
     const userTagInput = document.getElementById("login-username").value.trim();
     const passwordInput = document.getElementById("login-password").value;
-    const displayNameInput = document.getElementById("login-displayname").value.trim();
+    const displayNameInput = document.getElementById("login-displayname") ? document.getElementById("login-displayname").value.trim() : "";
 
     if (!userTagInput || !passwordInput) {
         return alert("Por favor, preencha o username e a senha!");
     }
 
-    // Regra rígida de tag/username estilo Discord/X
     if (/[A-Z]/.test(userTagInput) || /\s/.test(userTagInput)) {
         return alert("O @username não pode conter letras maiúsculas ou espaços!");
     }
 
-    const userTagFormatted = `@${userTagInput}`;
-
-    if (mode === 'register') {
-        // Fluxo de Criação de Conta
-        if (!displayNameInput) {
-            return alert("Para registrar uma nova conta, preencha o Nome de Exibição!");
-        }
-
-        currentUser = {
-            uid: userTagFormatted,
-            name: displayNameInput,
-            avatar: "user-photo.jpg",
-            password: passwordInput // Armazenamento simples local na versão Alfa
-        };
-
-        localStorage.setItem(`account_${userTagFormatted}`, JSON.stringify(currentUser));
-        localStorage.setItem("sala_project_user", JSON.stringify(currentUser));
-        alert("Conta criada com sucesso!");
-        initHome();
-
+    if (currentAuthMode === 'register') {
+        if (!displayNameInput) return alert("Por favor, informe seu Nome de Exibição!");
+        socket.emit("submit_register", { username: userTagInput, displayName: displayNameInput, password: passwordInput });
     } else {
-        // Fluxo de Login (Apenas Entrar)
-        const localAccount = localStorage.getItem(`account_${userTagFormatted}`);
+        socket.emit("submit_login", { username: userTagInput, password: passwordInput });
+    }
+    
+    currentUser = { password_backup: passwordInput };
+}
+
+socket.on("auth_response", (response) => {
+    if (response.success) {
+        const passwordToken = currentUser ? currentUser.password_backup : "";
+        currentUser = response.user;
+        currentUser.password_backup = passwordToken;
         
-        if (!localAccount) {
-            return alert("Esta conta não foi encontrada! Mude para a aba 'Criar Conta' se for seu primeiro acesso.");
-        }
-
-        const parsedAccount = JSON.parse(localAccount);
-
-        if (parsedAccount.password !== passwordInput) {
-            return alert("Senha incorreta para este usuário!");
-        }
-
-        currentUser = parsedAccount;
         localStorage.setItem("sala_project_user", JSON.stringify(currentUser));
         initHome();
+    } else {
+        alert(response.message);
+        showScreen("login");
     }
-}
+});
 
 function logout() {
     localStorage.removeItem("sala_project_user");
@@ -93,18 +130,16 @@ function logout() {
 }
 
 // ==========================================
-// 3. HOME & GERENCIAMENTO DE PERFIL NA SIDEBAR
+// 3. AMBIENTE DASHBOARD (HOME E PROFILE)
 // ==========================================
 function initHome() {
     showScreen("home");
     
-    // Atualiza as informações do painel lateral esquerdo
-    document.getElementById("user-uid").innerText = currentUser.uid;
-    document.getElementById("sidebar-display-name").innerText = currentUser.name;
-    document.getElementById("profile-display-name").value = currentUser.name;
-    document.getElementById("avatar-preview").src = currentUser.avatar;
+    if (document.getElementById("user-uid")) document.getElementById("user-uid").innerText = currentUser.uid;
+    if (document.getElementById("sidebar-display-name")) document.getElementById("sidebar-display-name").innerText = currentUser.name;
+    if (document.getElementById("profile-display-name")) document.getElementById("profile-display-name").value = currentUser.name;
+    if (document.getElementById("avatar-preview")) document.getElementById("avatar-preview").src = currentUser.avatar || "user-photo.jpg";
 
-    // Solicita a lista de salas para o servidor
     socket.emit("request_room_list");
 }
 
@@ -113,15 +148,10 @@ function updateDisplayName() {
     if (!newName) return alert("O nome não pode ser vazio.");
     
     currentUser.name = newName;
-    
-    // Atualiza os storages locais (sessão atual e banco da conta)
     localStorage.setItem("sala_project_user", JSON.stringify(currentUser));
-    localStorage.setItem(`account_${currentUser.uid}`, JSON.stringify(currentUser));
-    
-    document.getElementById("sidebar-display-name").innerText = newName;
-    alert("Nome atualizado!");
+    if (document.getElementById("sidebar-display-name")) document.getElementById("sidebar-display-name").innerText = newName;
+    alert("Nome de exibição updated!");
 
-    // Se o usuário estiver dentro de uma sala ativa, atualiza os outros membros na hora
     if (currentRoom) {
         socket.emit("update_user_profile", { roomId: currentRoom.id, user: currentUser });
     }
@@ -133,10 +163,8 @@ function handleAvatarUpload(event) {
         const reader = new FileReader();
         reader.onload = function(e) {
             currentUser.avatar = e.target.result;
-            document.getElementById("avatar-preview").src = currentUser.avatar;
-            
+            if (document.getElementById("avatar-preview")) document.getElementById("avatar-preview").src = currentUser.avatar;
             localStorage.setItem("sala_project_user", JSON.stringify(currentUser));
-            localStorage.setItem(`account_${currentUser.uid}`, JSON.stringify(currentUser));
             
             if (currentRoom) {
                 socket.emit("update_user_profile", { roomId: currentRoom.id, user: currentUser });
@@ -147,16 +175,16 @@ function handleAvatarUpload(event) {
 }
 
 // ==========================================
-// 4. CRIAÇÃO E ENTRADA EM SALAS DE VOZ
+// 4. EMISSÃO E ALIMENTAÇÃO DO FEED DE SALAS
 // ==========================================
 function createRoomData() {
     const roomName = document.getElementById("room-name-input").value.trim();
     const roomType = document.getElementById("room-type-select").value;
-    const roomPassword = document.getElementById("room-password-input").value;
-    const roomLimit = document.getElementById("room-limit-input").value;
+    const roomPassword = document.getElementById("room-password-input") ? document.getElementById("room-password-input").value : "";
+    const roomLimit = document.getElementById("room-limit-input") ? document.getElementById("room-limit-input").value : 8;
 
-    if (!roomName) return alert("A sala precisa de um nome!");
-    if (roomType === "private" && !roomPassword) return alert("Defina uma senha para a sala privada.");
+    if (!roomName) return alert("A sala precisa de um nome válido!");
+    if (roomType === "private" && !roomPassword) return alert("Defina uma senha de acesso!");
 
     const roomPayload = {
         id: "room_" + Math.random().toString(36).substr(2, 9),
@@ -165,17 +193,19 @@ function createRoomData() {
         password: roomPassword,
         limit: parseInt(roomLimit) || 8,
         ownerId: currentUser.uid,
+        creatorInfo: currentUser,
         users: []
     };
 
     socket.emit("create_room", roomPayload);
 }
 
-// Recebe e renderiza a lista de salas disponíveis no Feed Central
 socket.on("update_room_list", (rooms) => {
     const listContainer = document.getElementById("rooms-live-list");
+    if (!listContainer) return;
+
     listContainer.innerHTML = rooms.length === 0 ? 
-        `<div class="no-rooms-notice">Nenhuma sala ativa no momento. Seja o primeiro a criar uma!</div>` : "";
+        `<div class="no-rooms-notice">Nenhuma sala ativa no momento. Crie uma nova acima!</div>` : "";
 
     rooms.forEach(room => {
         const roomCard = document.createElement("div");
@@ -195,22 +225,20 @@ socket.on("update_room_list", (rooms) => {
 function tryJoinRoom(roomId, type) {
     let password = "";
     if (type === "private") {
-        password = prompt("Esta sala é privada. Digite a senha para entrar:");
-        if (password === null) return; // Cancela ação se o usuário clicar em cancelar
+        password = prompt("Digite a senha secreta desta sala:");
+        if (password === null) return;
     }
     socket.emit("join_room", { roomId, password, user: currentUser });
 }
 
 // ==========================================
-// 5. GERENCIAMENTO DE ÁUDIO E DETECÇÃO DE VOZ (INDICADOR VERDE)
+// 5. INFRAESTRUTURA DE VOZ EM TEMPO REAL
 // ==========================================
 socket.on("room_joined_success", async (room) => {
     currentRoom = room;
     showScreen("room");
-    document.getElementById("room-title").innerText = room.name;
-    
-    // Mostra controles de gerência apenas se o usuário for o criador (Dono)
-    document.getElementById("owner-controls").style.display = room.ownerId === currentUser.uid ? "block" : "none";
+    if (document.getElementById("room-title")) document.getElementById("room-title").innerText = room.name;
+    if (document.getElementById("owner-controls")) document.getElementById("owner-controls").style.display = room.ownerId === currentUser.uid ? "block" : "none";
 
     await startLocalAudio();
     renderVoiceCards(room.users);
@@ -220,13 +248,11 @@ async function startLocalAudio() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         currentUser.micOn = true;
-        
         updateMicButtonUI(true);
         socket.emit("update_mic_status", { roomId: currentRoom.id, micOn: true });
         setupVoiceAnalyser();
     } catch (err) {
-        console.warn("Microfone inacessível.", err);
-        alert("Você entrou como Ouvinte (Sem microfone detectado ou permissão negada).");
+        console.warn("Microfone inacessível ou negado.", err);
         currentUser.micOn = false;
         updateMicButtonUI(false);
     }
@@ -235,38 +261,39 @@ async function startLocalAudio() {
 function setupVoiceAnalyser() {
     if (!localStream) return;
     
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioContext.createMediaStreamSource(localStream);
-    audioAnalyser = audioContext.createAnalyser();
-    audioAnalyser.fftSize = 256; 
-    source.connect(audioAnalyser);
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(localStream);
+        audioAnalyser = audioContext.createAnalyser();
+        audioAnalyser.fftSize = 256; 
+        source.connect(audioAnalyser);
 
-    const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
-    
-    micInterval = setInterval(() => {
-        if (!currentUser.micOn) return;
+        const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
         
-        audioAnalyser.getByteFrequencyData(dataArray);
-        let total = 0;
-        for (let i = 0; i < dataArray.length; i++) { total += dataArray[i]; }
-        const volumeMecanico = total / dataArray.length;
+        micInterval = setInterval(() => {
+            if (!currentUser.micOn || !audioAnalyser) return;
+            
+            audioAnalyser.getByteFrequencyData(dataArray);
+            let total = 0;
+            for (let i = 0; i < dataArray.length; i++) { total += dataArray[i]; }
+            const volume = total / dataArray.length;
 
-        // Sensibilidade de captação de voz (Threshold)
-        const isSpeaking = volumeMecanico > 10; 
-        
-        if (isSpeaking !== currentUser.isSpeaking) {
-            currentUser.isSpeaking = isSpeaking;
-            socket.emit("update_speaking_status", { roomId: currentRoom.id, isSpeaking });
-            toggleCardSpeakingUI(currentUser.uid, isSpeaking);
-        }
-    }, 120);
+            const isSpeaking = volume > 10;
+            
+            if (isSpeaking !== currentUser.isSpeaking) {
+                currentUser.isSpeaking = isSpeaking;
+                socket.emit("update_speaking_status", { roomId: currentRoom.id, isSpeaking });
+                toggleCardSpeakingUI(currentUser.uid, isSpeaking);
+            }
+        }, 120);
+    } catch (e) {
+        console.error("Análise de áudio indisponível", e);
+    }
 }
 
 function toggleMicrophone() {
-    if (!localStream) {
-        startLocalAudio();
-        return;
-    }
+    if (!localStream) return startLocalAudio();
+    
     const audioTrack = localStream.getAudioTracks()[0];
     audioTrack.enabled = !audioTrack.enabled;
     currentUser.micOn = audioTrack.enabled;
@@ -283,13 +310,9 @@ function toggleMicrophone() {
 
 function updateMicButtonUI(isActive) {
     const btn = document.getElementById("btn-mic");
-    if (isActive) {
-        btn.className = "btn-success status-dock-btn";
-        btn.innerText = "🎙️ Microfone Ativo";
-    } else {
-        btn.className = "btn-danger status-dock-btn";
-        btn.innerText = "🔇 Mutado";
-    }
+    if (!btn) return;
+    btn.className = isActive ? "btn-success status-dock-btn" : "btn-danger status-dock-btn";
+    btn.innerText = isActive ? "🎙️ Microfone Ativo" : "🔇 Mutado";
 }
 
 function toggleCardSpeakingUI(uid, isSpeaking) {
@@ -301,10 +324,11 @@ function toggleCardSpeakingUI(uid, isSpeaking) {
 }
 
 // ==========================================
-// 6. INTERFACE DENTRO DA SALA (CARDS E EXCLUSÕES)
+// 6. RENDERIZAÇÃO DAS GRIDS DE PARTICIPANTES
 // ==========================================
 function renderVoiceCards(users) {
     const cardContainer = document.getElementById("voice-cards-container");
+    if (!cardContainer) return;
     cardContainer.innerHTML = "";
 
     users.forEach(user => {
@@ -314,8 +338,8 @@ function renderVoiceCards(users) {
         card.setAttribute("data-uid", user.uid);
         
         card.innerHTML = `
-            <div class="avatar-wrapper" style="width: 70px; height: 70px;">
-                <img src="${user.avatar}" alt="Avatar" class="voice-avatar">
+            <div class="avatar-wrapper" style="width: 70px; height: 70px; position: relative;">
+                <img src="${user.avatar || 'user-photo.jpg'}" alt="Avatar" class="voice-avatar">
                 <div class="mic-indicator-dot ${user.micOn ? 'on' : 'off'}"></div>
             </div>
             <div class="voice-info">
@@ -333,7 +357,7 @@ function renderVoiceCards(users) {
 }
 
 function kickUser(targetUid) {
-    if (confirm(`Tem certeza que deseja expulsar ${targetUid} da sala?`)) {
+    if (confirm(`Expulsar usuário ${targetUid} da chamada?`)) {
         socket.emit("kick_user_request", { roomId: currentRoom.id, targetUid });
     }
 }
@@ -341,7 +365,7 @@ function kickUser(targetUid) {
 function leaveRoom() {
     if (currentRoom) {
         clearInterval(micInterval);
-        if (audioContext) audioContext.close();
+        if (audioContext) audioContext.close().catch(()=>{});
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
             localStream = null;
@@ -353,16 +377,17 @@ function leaveRoom() {
 }
 
 function deleteRoomByOwner() {
-    if (confirm("Você vai fechar a sala para todos os membros permanentemente. Continuar?")) {
+    if (confirm("Deseja fechar permanentemente a sala e desconectar todos os membros?")) {
         socket.emit("delete_room", { roomId: currentRoom.id });
     }
 }
 
 // ==========================================
-// 7. CHAT INTEGRADO DA SALA (MENSAGENS)
+// 7. CHAT TEXTUAL INTEGRADO EM TEMPO REAL
 // ==========================================
 function sendTextMessage() {
     const input = document.getElementById("chat-input");
+    if (!input) return;
     const text = input.value.trim();
     if (!text) return;
 
@@ -378,13 +403,8 @@ function sendTextMessage() {
     input.value = "";
 }
 
-socket.on("receive_chat_message", (data) => {
-    appendMessage(data, "other-message");
-});
-
-socket.on("room_notification", (notif) => {
-    appendMessage({ text: notif.text, system: true }, "system-message");
-});
+socket.on("receive_chat_message", (data) => appendMessage(data, "other-message"));
+socket.on("room_notification", (notif) => appendMessage({ text: notif.text, system: true }, "system-message"));
 
 socket.on("room_users_updated", (updatedUsers) => {
     if (currentRoom) {
@@ -394,13 +414,13 @@ socket.on("room_users_updated", (updatedUsers) => {
 });
 
 socket.on("room_kicked", () => {
-    alert("Você foi expulso da sala pelo proprietário.");
+    alert("Você foi expulso desta sala.");
     currentRoom = null;
     initHome();
 });
 
 socket.on("room_deleted_by_owner", () => {
-    alert("A sala ativa foi fechada pelo proprietário.");
+    alert("Esta sala foi finalizada pelo proprietário.");
     currentRoom = null;
     initHome();
 });
@@ -409,6 +429,8 @@ socket.on("room_error", (msg) => alert(msg));
 
 function appendMessage(data, typeClass) {
     const chatArea = document.getElementById("chat-area");
+    if (!chatArea) return;
+    
     const msgElement = document.createElement("div");
     msgElement.className = `message-item ${typeClass}`;
 
@@ -416,7 +438,7 @@ function appendMessage(data, typeClass) {
         msgElement.innerHTML = `<div class="sys-msg-inside"><i>${data.text}</i></div>`;
     } else {
         msgElement.innerHTML = `
-            <img src="${data.user.avatar}" class="chat-avatar">
+            <img src="${data.user.avatar || 'user-photo.jpg'}" class="chat-avatar">
             <div class="message-content">
                 <div class="message-header">
                     <span class="chat-name">${data.user.name}</span>
@@ -431,9 +453,15 @@ function appendMessage(data, typeClass) {
     chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-// Auxiliar para navegação entre telas nativas
+// ==========================================
+// CONTROLADOR DE EXIBIÇÃO DE INTERFACES (DOM BLINDADO)
+// ==========================================
 function showScreen(screen) {
-    screenLogin.style.display = screen === "login" ? "flex" : "none";
-    screenHome.style.display = screen === "home" ? "grid" : "none";
-    screenRoom.style.display = screen === "room" ? "grid" : "none";
+    const sLogin = document.getElementById("screen-login");
+    const sHome = document.getElementById("screen-home");
+    const sRoom = document.getElementById("screen-room");
+
+    if (sLogin) sLogin.style.display = screen === "login" ? "flex" : "none";
+    if (sHome) sHome.style.display = screen === "home" ? "grid" : "none";
+    if (sRoom) sRoom.style.display = screen === "room" ? "grid" : "none";
 }
