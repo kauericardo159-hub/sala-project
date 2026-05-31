@@ -1,29 +1,40 @@
-// server.js - Servidor Central de Comunicação Real-Time — Pro Version
+"use strict";
+
+// server.js - Servidor Central de Comunicação Real-Time — Pro Version (Fixed)
 
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const Banco = require('./bancos');
+const path = require('path');
 
 const app = express();
+
+// 🚀 LINK DE PRODUÇÃO (Recuperado para evitar o erro de variável indefinida)
 const GITHUB_PAGES_URL = "https://kauericardo159-hub.github.io";
 
-// Configuração estrita de CORS para a API Express
-app.use(cors({ origin: GITHUB_PAGES_URL }));
+// Diz ao Express para servir seus arquivos (HTML, CSS, JS) automaticamente
+app.use(express.static(__dirname)); 
+
+// Flexibiliza o CORS do Express para aceitar tanto a produção (GitHub) quanto os testes locais
+app.use(cors({ 
+    origin: [GITHUB_PAGES_URL, "http://127.0.0.1:3000", "http://localhost:3000"] 
+}));
 const server = http.createServer(app);
 
 // Inicialização do Servidor Socket.io
 const io = new Server(server, {
-    cors: { 
-        origin: GITHUB_PAGES_URL, 
-        methods: ["GET", "POST"] 
+    maxHttpBufferSize: 1e7, // 10MB de limite para aguentar as strings Base64 das fotos
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
     }
 });
 
-// Endpoint de verificação de status (Health Check)
+// 🔥 CORREÇÃO: Agora o servidor entrega o seu index.html real quando você acessa a porta 3000
 app.get('/', (req, res) => { 
-    res.send('Servidor Pro operando com Sistema de Amigos e Modularidade!'); 
+    res.sendFile(path.join(__dirname, 'index.html')); 
 });
 
 // ==========================================================================
@@ -66,15 +77,12 @@ io.on('connection', (socket) => {
         if (resultado.success) {
             const uid = resultado.user.uid;
             
-            // 1. Marca como online
             Banco.setUserOnlineStatus(uid, true, socket.id);
             socket.emit('auth_response', resultado);
 
-            // 2. Envia as listas sociais do próprio usuário
             notifyUserFriendsList(uid);
             notifyUserRequestsList(uid);
 
-            // 3. Avisa aos amigos dele que ele ficou Online
             const account = Banco.getAccountByUid(uid);
             if (account && account.friends) {
                 account.friends.forEach(friendUid => notifyUserFriendsList(friendUid));
@@ -92,19 +100,17 @@ io.on('connection', (socket) => {
         const resultado = Banco.sendFriendRequest(senderUid, targetUid);
         if (resultado.success) {
             socket.emit('friend_notification', resultado.message);
-            notifyUserRequestsList(targetUid); // Atualiza a tela de quem recebeu
+            notifyUserRequestsList(targetUid);
         } else {
-            socket.emit('friend_notification', resultado.message); // Erro
+            socket.emit('friend_notification', resultado.message);
         }
     });
 
     socket.on('respond_friend_request', ({ myUid, targetUid, action }) => {
         const resultado = Banco.respondFriendRequest(myUid, targetUid, action);
         if (resultado) {
-            // Atualiza os convites e a lista de quem aceitou
             notifyUserRequestsList(myUid);
             notifyUserFriendsList(myUid);
-            // Atualiza a lista de quem foi aceito
             notifyUserFriendsList(targetUid);
             
             if (action === "accept") {
@@ -128,6 +134,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('create_room', (roomPayload) => {
+        if (roomPayload && roomPayload.id) roomPayload.id = String(roomPayload.id);
+        
         const creatorData = roomPayload.creatorInfo; 
         const novaSala = Banco.createRoom(roomPayload);
         
@@ -138,13 +146,15 @@ io.on('connection', (socket) => {
                     name: creatorData.name, 
                     avatar: creatorData.avatar || "user-photo.jpg",
                     socketId: socket.id,
-                    micOn: true,
+                    micOn: false,
                     isSpeaking: false
                 });
             }
-            socket.join(novaSala.id);
-            socket.emit('room_joined', novaSala); // Aciona o gatilho para limpar o chat
+            socket.join(String(novaSala.id));
+            
+            socket.emit('room_joined', novaSala); 
             socket.emit('room_joined_success', novaSala);
+            
             io.emit('update_room_list', Banco.getPublicRoomsList());
         } else {
             socket.emit('room_error', 'Não foi possível criar esta sala.');
@@ -152,20 +162,22 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join_room', ({ roomId, password, user }) => {
-        const room = Banco.findRoomById(roomId);
+        const idString = String(roomId);
+        const room = Banco.findRoomById(idString);
+        
         if (!room) return socket.emit('room_error', 'Esta sala não existe mais.');
         if (room.type === 'private' && room.password !== password) return socket.emit('room_error', 'Senha incorreta!');
 
         user.socketId = socket.id;
-        const resultado = Banco.addUserToRoom(roomId, user);
+        const resultado = Banco.addUserToRoom(idString, user);
 
         if (resultado.success) {
-            socket.join(roomId);
-            socket.emit('room_joined'); // Aciona o gatilho para limpar o chat no frontend
+            socket.join(idString);
+            socket.emit('room_joined', resultado.room); 
             socket.emit('room_joined_success', resultado.room);
             
-            io.to(roomId).emit('room_notification', { text: `${user.name} entrou na sala.` });
-            io.to(roomId).emit('room_users_update', resultado.room.users);
+            io.to(idString).emit('room_notification', { text: `${user.name} entrou na sala.` });
+            io.to(idString).emit('room_users_updated', resultado.room.users);
             io.emit('update_room_list', Banco.getPublicRoomsList());
         } else {
             socket.emit('room_error', resultado.message);
@@ -173,7 +185,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('leave_room', ({ roomId }) => {
-        const room = Banco.findRoomById(roomId);
+        const idString = String(roomId);
+        const room = Banco.findRoomById(idString);
         let userName = "Alguém";
         let uid = null;
         
@@ -186,66 +199,94 @@ io.on('connection', (socket) => {
         }
         
         if (uid) {
-            const roomAtualizada = Banco.removeUserFromRoom(roomId, uid);
-            socket.leave(roomId);
+            const roomAtualizada = Banco.removeUserFromRoom(idString, uid);
+            socket.leave(idString);
             
             if (roomAtualizada) {
-                io.to(roomId).emit('room_notification', { text: `${userName} saiu da sala.` });
-                io.to(roomId).emit('room_users_update', roomAtualizada.users);
+                io.to(idString).emit('room_notification', { text: `${userName} saiu da sala.` });
+                io.to(idString).emit('room_users_updated', roomAtualizada.users);
             }
             io.emit('update_room_list', Banco.getPublicRoomsList());
         }
     });
 
     // ==========================================
-    // 4. CHAT DE TEXTO E VOZ
+    // 4. ATUALIZAÇÃO DE PERFIL E FOTO
     // ==========================================
+    socket.on('update_user_profile', ({ roomId, user }) => {
+        if (!user || !user.uid) return;
 
+        const safeAccount = Banco.updateAccountProfile(user.uid, user.name, user.avatar);
+
+        if (safeAccount) {
+            if (roomId) {
+                const room = Banco.findRoomById(String(roomId));
+                if (room) {
+                    const player = room.users.find(u => u.uid === user.uid);
+                    if (player) {
+                        if (user.name) player.name = user.name;
+                        if (user.avatar) player.avatar = user.avatar;
+                    }
+                    io.to(String(roomId)).emit('room_users_updated', room.users);
+                }
+            }
+
+            const accountMaster = Banco.getAccountByUid(user.uid);
+            if (accountMaster && accountMaster.friends) {
+                accountMaster.friends.forEach(friendUid => notifyUserFriendsList(friendUid));
+            }
+
+            socket.emit('profile_updated_success', safeAccount);
+        }
+    });
+
+    // ==========================================
+    // 5. CHAT DE TEXTO E VOZ
+    // ==========================================
     socket.on('send_message', (messagePayload) => {
-        // Dispara para todo mundo na sala (incluindo quem enviou para que ele veja a própria msg)
-        io.to(messagePayload.roomId).emit('receive_message', messagePayload);
+        if (messagePayload && messagePayload.roomId) {
+            io.to(String(messagePayload.roomId)).emit('receive_message', messagePayload);
+        }
     });
 
     socket.on('toggle_mic', ({ roomId, micOn }) => {
-        const room = Banco.findRoomById(roomId);
+        const idString = String(roomId);
+        const room = Banco.findRoomById(idString);
         if (room) {
             const user = room.users.find(u => u.socketId === socket.id);
             if (user) {
-                Banco.updateUserMic(roomId, user.uid, micOn);
-                // Avisa apenas sobre esse usuário, economiza banda em vez de mandar o array inteiro
-                io.to(roomId).emit('user_mic_toggled', { uid: user.uid, micOn });
+                Banco.updateUserMic(idString, user.uid, micOn);
+                io.to(idString).emit('user_mic_toggled', { uid: user.uid, micOn });
             }
         }
     });
 
     socket.on('is_speaking', ({ roomId, isSpeaking }) => {
-        const room = Banco.findRoomById(roomId);
+        const idString = String(roomId);
+        const room = Banco.findRoomById(idString);
         if (room) {
             const user = room.users.find(u => u.socketId === socket.id);
             if (user) {
                 user.isSpeaking = isSpeaking;
-                io.to(roomId).emit('user_speaking', { uid: user.uid, isSpeaking });
+                io.to(idString).emit('user_speaking', { uid: user.uid, isSpeaking });
             }
         }
     });
 
     // ==========================================
-    // 5. TRATAMENTO DE DESCONEXÃO (FECHOU ABA)
+    // 6. TRATAMENTO DE DESCONEXÃO
     // ==========================================
     socket.on('disconnect', () => {
         console.log(`[DESCONEXÃO] Socket perdido: ${socket.id}`);
         
-        // Remove das salas e marca como offline
         const { updatedRoom, disconnectedUid } = Banco.removeUserFromAllRooms(socket.id);
         
-        // Se ele estava em uma sala, avisa o resto do pessoal lá
         if (updatedRoom) {
-            io.to(updatedRoom.id).emit('room_notification', { text: `Alguém caiu da chamada.` });
-            io.to(updatedRoom.id).emit('room_users_update', updatedRoom.users);
+            io.to(String(updatedRoom.id)).emit('room_notification', { text: `Alguém caiu da chamada.` });
+            io.to(String(updatedRoom.id)).emit('room_users_updated', updatedRoom.users);
             io.emit('update_room_list', Banco.getPublicRoomsList());
         }
 
-        // Se ele tinha uma conta logada, avisa os amigos que ele ficou offline
         if (disconnectedUid) {
             const account = Banco.getAccountByUid(disconnectedUid);
             if (account && account.friends) {
@@ -255,8 +296,12 @@ io.on('connection', (socket) => {
     });
 });
 
-// Inicialização
+// ==========================================
+// INICIALIZAÇÃO DO SERVIDOR
+// ==========================================
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { 
+
+// Escutando em 0.0.0.0 para aceitar conexões locais internas do navegador do celular
+server.listen(PORT, '0.0.0.0', () => { 
     console.log(`[SUCESSO] Servidor Pro rodando na porta ${PORT}`); 
 });

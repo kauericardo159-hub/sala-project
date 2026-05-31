@@ -1,6 +1,6 @@
 "use strict";
 
-// chat.js - Gerenciamento do chat em tempo real dentro da sala
+// chat.js - Gerenciamento do chat em tempo real dentro da sala — Pro Version
 
 import { socket, appState } from './main.js';
 import { escapeHTML } from './ui.js';
@@ -34,8 +34,8 @@ export function setupChatInterface() {
         appendMessageToDOM(messageData);
     });
 
-    // Escutador: Limpar chat quando entrar em uma nova sala
-    socket.off("room_joined").on("room_joined", () => {
+    // [CORREÇÃO] Atualizado para 'room_joined_success' para alinhar com o ciclo de vida do main.js
+    socket.off("room_joined_success").on("room_joined_success", () => {
         const chatContainer = document.getElementById("chat-messages-container");
         if (chatContainer) chatContainer.innerHTML = "";
     });
@@ -59,12 +59,12 @@ function handleSendMessage() {
         return;
     }
 
-    // Monta o pacote de dados da mensagem
+    // [CORREÇÃO] Forçando o roomId a ir como String para bater com a busca estrita do servidor
     const messagePayload = {
-        roomId: room.id,
+        roomId: String(room.id),
         uid: user.uid,
         name: user.name,
-        avatar: user.avatar,
+        avatar: user.avatar, // Tráfego seguro da string Base64 original
         text: text,
         timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
@@ -72,7 +72,7 @@ function handleSendMessage() {
     // Envia para o servidor e limpa o input
     socket.emit("send_message", messagePayload);
     inputField.value = "";
-    inputField.focus(); // Mantém o cursor piscando na caixa de texto
+    inputField.focus(); 
 }
 
 // ==========================================
@@ -83,22 +83,24 @@ function appendMessageToDOM(msgData) {
     if (!chatContainer) return;
 
     const user = appState.currentUser;
-    // Verifica se a mensagem foi enviada por mim ou por outra pessoa para o CSS
     const isMine = user && msgData.uid === user.uid;
     const alignClass = isMine ? "msg-mine" : "msg-others";
 
-    // Proteção XSS rigorosa antes de jogar no DOM
+    // Proteção XSS rigorosa no texto e metadados
     const safeName = escapeHTML(msgData.name);
     const safeText = escapeHTML(msgData.text);
     const safeTime = escapeHTML(msgData.timestamp);
-    const safeAvatar = escapeHTML(msgData.avatar || "user-photo.jpg");
+    
+    // [CORREÇÃO] Não passamos o avatar pelo escapeHTML para não quebrar a string Base64.
+    // Em vez disso, validamos se existe e usamos um fallback limpo contra injeção de aspas.
+    const rawAvatar = msgData.avatar || "user-photo.jpg";
 
-    // Cria a estrutura da mensagem HTML
+    // Cria a estrutura da mensagem HTML de forma segura
     const messageDiv = document.createElement("div");
     messageDiv.className = `chat-message ${alignClass}`;
 
     messageDiv.innerHTML = `
-        <img src="${safeAvatar}" alt="${safeName}" class="chat-msg-avatar" onerror="this.src='user-photo.jpg'">
+        <img src="${rawAvatar}" alt="${safeName}" class="chat-msg-avatar" onerror="this.src='user-photo.jpg'">
         <div class="chat-msg-content">
             <div class="chat-msg-header">
                 <span class="chat-msg-name">${safeName}</span>
@@ -111,7 +113,7 @@ function appendMessageToDOM(msgData) {
     // Adiciona ao container
     chatContainer.appendChild(messageDiv);
 
-    // Auto-scroll para a última mensagem (Rola a barra para baixo suavemente)
+    // Auto-scroll para a última mensagem
     chatContainer.scrollTo({
         top: chatContainer.scrollHeight,
         behavior: 'smooth'

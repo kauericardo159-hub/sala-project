@@ -1,39 +1,65 @@
 "use strict";
 
-// main.js - Ponto de Entrada, Gerenciamento de Estado e Resiliência de Rede
+// main.js - Ponto de Entrada, Gerenciamento de Estado e Resiliência de Rede — Pro Version
+
 import { showScreen } from './ui.js';
 import { setupAuthInterface, handleAutomaticLogin } from './auth.js';
 import { setupRoomCreationInterface } from './rooms.js';
 import { setupProfileInterface } from './profile.js';
 import { setupChatInterface } from './chat.js';
 import { setupVoiceInterface } from './voice.js';
-import { setupFriendsInterface } from './friends.js'; // [NOVO] Importação do sistema social
+import { setupFriendsInterface } from './friends.js';
+
+// ==========================================
+// CONFIGURAÇÃO DE AMBIENTE (CONEXÃO DIRETA COM A NUVEM)
+// ==========================================
+// 🔥 CORREÇÃO CRÍTICA: Como o Acode não roda backend local, apontamos direto para o Render.
+const SERVER_URL = "https://sala-project.onrender.com";
+
+console.log(`[SISTEMA] Conectando ao ecossistema no endereço: ${SERVER_URL}`);
 
 // ==========================================
 // 1. CONEXÃO RESILIENTE (WEBSOCKET)
 // ==========================================
-// Configuração avançada com tentativas de reconexão automática e timeouts
-export const socket = io("https://sala-project.onrender.com", {
+export const socket = io(SERVER_URL, {
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 2000,
-    timeout: 10000,
-    transports: ['websocket', 'polling'] // Prioriza websocket puro para menor latência
+    timeout: 15000, // Aumentado um pouco para dar tempo do Render acordar se estiver em standby
+    transports: ['websocket', 'polling']
 });
 
-// Monitoramento proativo da rede
+// Monitoramento proativo da rede e auto-recuperação de sessão
 socket.on("connect_error", (err) => {
     console.warn("[REDE] Instabilidade detectada na conexão com o servidor:", err.message);
 });
 
 socket.on("reconnect", (attempt) => {
     console.log(`[REDE] Conexão restabelecida após ${attempt} tentativa(s).`);
+    
+    // Se o usuário caiu e reconectou, reautentica no servidor em background
+    if (_state.currentUser && _state.currentUser.username && _state.currentUser.password_backup) {
+        console.log("[REDE] Sincronizando credenciais do Socket com o servidor...");
+        socket.emit("submit_login", {
+            username: _state.currentUser.username,
+            password: _state.currentUser.password_backup
+        });
+        
+        // Se ele estava em uma sala antes da queda, re-entra automaticamente
+        if (_state.currentRoom) {
+            console.log(`[REDE] Recuperando presença na sala: ${_state.currentRoom.id}`);
+            socket.emit("join_room", {
+                roomId: _state.currentRoom.id,
+                password: _state.currentRoom.password || "",
+                user: _state.currentUser
+            });
+        }
+    }
 });
 
 // ==========================================
 // 2. GERENCIAMENTO DE ESTADO GLOBAL (SINGLETON)
 // ==========================================
-// Encapsulamento do estado para evitar mutações diretas indesejadas e garantir rastreabilidade
 const _state = {
     currentUser: null,
     currentRoom: null,
@@ -41,12 +67,10 @@ const _state = {
     audioContext: null,
     audioAnalyser: null,
     micInterval: null,
-    currentAuthMode: "login" // 'login' | 'register'
+    currentAuthMode: "login"
 };
 
-// Exportamos um objeto congelado com getters e setters controlados
 export const appState = {
-    // Getters
     get currentUser() { return _state.currentUser; },
     get currentRoom() { return _state.currentRoom; },
     get localStream() { return _state.localStream; },
@@ -55,14 +79,13 @@ export const appState = {
     get micInterval() { return _state.micInterval; },
     get currentAuthMode() { return _state.currentAuthMode; },
 
-    // Setters controlados com logs para debug facilitado
     setCurrentUser(userData) {
         _state.currentUser = userData;
-        console.debug("[ESTADO] currentUser atualizado:", userData ? userData.uid : "null");
+        console.debug("[ESTADO] currentUser updated:", userData ? userData.uid : "null");
     },
     setCurrentRoom(roomData) {
         _state.currentRoom = roomData;
-        console.debug("[ESTADO] currentRoom atualizado:", roomData ? roomData.id : "null");
+        console.debug("[ESTADO] currentRoom updated:", roomData ? roomData.id : "null");
     },
     setAudioEntity(key, value) {
         const validKeys = ['localStream', 'audioContext', 'audioAnalyser', 'micInterval'];
@@ -80,19 +103,27 @@ export const appState = {
 };
 
 // ==========================================
-// 3. INICIALIZAÇÃO BLINDADA DO DOM (BOOTSTRAP)
+// 3. LISTENERS GLOBAIS DE ESTADO (BLINDAGEM DE INTERFACE)
+// ==========================================
+socket.on("room_joined_success", (room) => {
+    console.log("[ESTADO] Confirmação de entrada na sala recebida com sucesso:", room.id);
+    appState.setCurrentRoom(room);
+    showScreen("room"); 
+});
+
+socket.on("room_error", (errorMessage) => {
+    alert(`Erro na Sala: ${errorMessage}`);
+});
+
+// ==========================================
+// 4. INICIALIZAÇÃO BLINDADA DO DOM (BOOTSTRAP)
 // ==========================================
 window.addEventListener("DOMContentLoaded", () => {
     try {
         console.log("[SISTEMA] Iniciando inicialização do ecossistema Alfa...");
 
-        // 1. Interface de contenção inicial
         showScreen("login");
-
-        // 2. Injeção de dependências e eventos na UI
         initModules();
-
-        // 3. Restauração de Sessão Segura
         restoreSession();
 
         console.log("[SISTEMA] Ecossistema carregado com sucesso.");
@@ -108,7 +139,7 @@ function initModules() {
     setupRoomCreationInterface();
     setupVoiceInterface();
     setupChatInterface();
-    setupFriendsInterface(); // [NOVO] Inicialização do sistema de amigos
+    setupFriendsInterface();
 }
 
 function restoreSession() {

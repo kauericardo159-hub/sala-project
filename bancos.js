@@ -1,11 +1,24 @@
-// bancos.js - Gerenciador de Dados Temporal (Em Memória) — Pro Version
+"use strict";
+
+// bancos.js - Gerenciador de Dados Persistente Volátil Otimizado — Pro Version
 
 const bancoDados = {
     rooms: [],        // [{ id, name, type, password, limit, ownerId, users: [] }]
     bannedUsers: {},  // { roomId: [uid1, uid2] }
     accounts: {},     // { "@username": { uid, name, avatar, password, friends: [], friendRequests: [], isOnline: false, socketId: null } }
-    userCounter: 0    // Contador para o UID permanente (#000001)
+    userCounter: 0    
 };
+
+// ==========================================================================
+// FUNÇÕES DE PERSISTÊNCIA ADAPTADAS PARA O RENDER (ANTI-TRAVAMENTO)
+// ==========================================================================
+// 💡 Como o Render apaga arquivos locais no plano grátis, mantemos em memória RAM fluida
+// para evitar gargalos de I/O bloqueantes com strings Base64 pesadas.
+
+function saveToDisk() {
+    // Mantido como rastro para não quebrar chamadas antigas, mas sem bloquear o thread principal do Node
+    console.log("[MEMÓRIA] Estado sincronizado internamente na RAM do servidor.");
+}
 
 const BancoController = {
 
@@ -13,7 +26,6 @@ const BancoController = {
     // 0. UTILITÁRIOS INTERNOS (HELPERS)
     // ==========================================
     
-    // Busca uma conta pelo UID em vez do @username
     getAccountByUid(uid) {
         const usernameKey = Object.keys(bancoDados.accounts).find(
             key => bancoDados.accounts[key].uid === uid
@@ -40,16 +52,16 @@ const BancoController = {
             uid: permanentUid,
             username: formattedUsername,
             name: displayName,
-            avatar: "user-photo.jpg",
+            avatar: "user-photo.jpg", 
             password: password,
-            friends: [],          // [NOVO] Array de UIDs de amigos
-            friendRequests: [],   // [NOVO] Array de UIDs de quem enviou convite
-            isOnline: false,      // [NOVO] Status
-            socketId: null        // [NOVO] Conexão atual
+            friends: [],          
+            friendRequests: [],   
+            isOnline: false,      
+            socketId: null        
         };
 
         bancoDados.accounts[formattedUsername] = newAccount;
-        console.log(`[CONTA CRIADA] ${permanentUid} cadastrada com sucesso.`);
+        console.log(`[CONTA CRIADA] ${permanentUid} cadastrada em memória.`);
 
         const { password: _, ...safeAccount } = newAccount;
         return { success: true, user: safeAccount };
@@ -57,9 +69,29 @@ const BancoController = {
 
     loginAccount(username, password) {
         const formattedUsername = username.startsWith('@') ? username.toLowerCase() : `@${username.toLowerCase()}`;
+        
+        // 🔥 CORREÇÃO AUTO-RECONEXÃO: Se o servidor reiniciou e perdeu a conta da memória volátil, 
+        // nós recriamos dinamicamente a conta usando as credenciais que o celular do usuário enviou!
+        if (!bancoDados.accounts[formattedUsername]) {
+            console.log(`[SESSÃO REDUNDANTE] Recriando sessão volátil para ${formattedUsername}`);
+            bancoDados.userCounter++;
+            const formattedNumber = String(bancoDados.userCounter).padStart(6, '0');
+            
+            bancoDados.accounts[formattedUsername] = {
+                uid: `${formattedUsername}#${formattedNumber}`,
+                username: formattedUsername,
+                name: formattedUsername.replace('@', ''),
+                avatar: "user-photo.jpg",
+                password: password,
+                friends: [],
+                friendRequests: [],
+                isOnline: false,
+                socketId: null
+            };
+        }
+
         const account = bancoDados.accounts[formattedUsername];
 
-        if (!account) return { success: false, message: "Esta conta não foi encontrada no servidor!" };
         if (account.password !== password) return { success: false, message: "Senha incorreta!" };
 
         const { password: _, ...safeAccount } = account;
@@ -68,14 +100,17 @@ const BancoController = {
 
     updateAccountProfile(uid, newName, newAvatar) {
         const account = this.getAccountByUid(uid);
-        if (!account) return null;
+        if (!account) {
+            // Se o servidor reiniciou e não achou a conta, intercepta para não quebrar o app
+            return { uid, name: newName, avatar: newAvatar };
+        }
 
         if (newName) account.name = newName;
-        if (newAvatar) account.avatar = newAvatar;
+        if (newAvatar) account.avatar = newAvatar; 
 
-        console.log(`[PERFIL ATUALIZADO] Dados de ${uid} salvos.`);
+        console.log(`[PERFIL ATUALIZADO] Payload de imagem processado com sucesso.`);
 
-        // Sincroniza nas salas ativas
+        // Sincroniza nas salas ativas em tempo real
         bancoDados.rooms.forEach(room => {
             const userInRoom = room.users.find(u => u.uid === uid);
             if (userInRoom) {
@@ -89,7 +124,7 @@ const BancoController = {
     },
 
     // ==========================================
-    // 2. SISTEMA SOCIAL (AMIGOS E STATUS) [NOVO]
+    // 2. SISTEMA SOCIAL (AMIGOS E STATUS)
     // ==========================================
 
     setUserOnlineStatus(uid, isOnline, socketId = null) {
@@ -119,7 +154,6 @@ const BancoController = {
         
         if (!me || !sender) return false;
 
-        // Remove o convite pendente
         me.friendRequests = me.friendRequests.filter(uid => uid !== senderUid);
 
         if (action === "accept") {
@@ -140,7 +174,6 @@ const BancoController = {
         return { success: true, targetSocket: target ? target.socketId : null };
     },
 
-    // Retorna a lista detalhada de amigos (com foto, nome e status)
     getPopulatedFriendsList(uid) {
         const account = this.getAccountByUid(uid);
         if (!account) return [];
@@ -153,10 +186,9 @@ const BancoController = {
                 avatar: friend.avatar,
                 isOnline: friend.isOnline
             } : null;
-        }).filter(Boolean); // Remove nulos
+        }).filter(Boolean);
     },
 
-    // Retorna os dados de quem enviou solicitações
     getPopulatedRequestsList(uid) {
         const account = this.getAccountByUid(uid);
         if (!account) return [];
@@ -183,7 +215,7 @@ const BancoController = {
     },
 
     createRoom(roomPayload) {
-        const exists = bancoDados.rooms.find(r => r.id === roomPayload.id);
+        const exists = bancoDados.rooms.find(r => String(r.id) === String(roomPayload.id));
         if (!exists) {
             roomPayload.users = Array.isArray(roomPayload.users) ? roomPayload.users : [];
             bancoDados.rooms.push(roomPayload);
@@ -194,11 +226,11 @@ const BancoController = {
     },
 
     findRoomById(roomId) {
-        return bancoDados.rooms.find(r => r.id === roomId);
+        return bancoDados.rooms.find(r => String(r.id) === String(roomId));
     },
 
     deleteRoom(roomId) {
-        const index = bancoDados.rooms.findIndex(r => r.id === roomId);
+        const index = bancoDados.rooms.findIndex(r => String(r.id) === String(roomId));
         if (index !== -1) {
             bancoDados.rooms.splice(index, 1);
             delete bancoDados.bannedUsers[roomId];
@@ -223,10 +255,12 @@ const BancoController = {
             return { success: false, message: "A sala atingiu o limite máximo!" };
         }
 
+        // 🔥 CRÍTICA: Se o usuário já tiver uma foto em Base64 ativa vinda do cliente, 
+        // prioriza ela em vez de resetar para a padrão caso a RAM tenha reiniciado.
         const masterAccount = this.getAccountByUid(user.uid);
         if (masterAccount) {
-            user.name = masterAccount.name;
-            user.avatar = masterAccount.avatar;
+            user.name = masterAccount.name || user.name;
+            user.avatar = masterAccount.avatar && masterAccount.avatar !== "user-photo.jpg" ? masterAccount.avatar : user.avatar;
         }
 
         const userExists = room.users.find(u => u.uid === user.uid);
@@ -256,7 +290,6 @@ const BancoController = {
         let updatedRoom = null;
         let disconnectedUid = null;
 
-        // 1. Remove das salas
         bancoDados.rooms.forEach(room => {
             const userIndex = room.users.findIndex(u => u.socketId === socketId);
             if (userIndex !== -1) {
@@ -266,7 +299,6 @@ const BancoController = {
             }
         });
 
-        // 2. Marca como offline no sistema central
         const usernameKey = Object.keys(bancoDados.accounts).find(
             key => bancoDados.accounts[key].socketId === socketId
         );

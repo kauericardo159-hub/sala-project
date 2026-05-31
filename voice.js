@@ -1,6 +1,6 @@
 "use strict";
 
-// voice.js - Gerenciamento de Hardware, Microfone e Efeito Visual de Voz
+// voice.js - Gerenciamento de Hardware, Microfone e Efeito Visual de Voz — Pro Version
 
 import { socket, appState } from './main.js';
 import { showScreen, renderVoiceCards } from './ui.js';
@@ -26,11 +26,11 @@ export function setupVoiceInterface() {
     // ESCUTADORES SOCKET (EVENTOS DA SALA)
     // ==========================================
     
-    // Alguém entrou ou saiu (re-renderiza o grid)
-    socket.off("room_users_update").on("room_users_update", (users) => {
+    // [CORREÇÃO] Nome do evento corrigido para 'room_users_updated' (sincronizado com o servidor)
+    socket.off("room_users_updated").on("room_users_updated", (users) => {
         const room = appState.currentRoom;
         if (room) {
-            room.users = users; // Atualiza o estado local
+            room.users = users; // Atualiza o estado local de usuários da sala
             renderVoiceCards(users, room.ownerId);
         }
     });
@@ -42,7 +42,7 @@ export function setupVoiceInterface() {
             const user = room.users.find(u => u.uid === uid);
             if (user) {
                 user.micOn = micOn;
-                renderVoiceCards(room.users, room.ownerId); // Re-renderiza para mudar o ícone
+                renderVoiceCards(room.users, room.ownerId); // Re-renderiza para mudar o ícone de mute
             }
         }
     });
@@ -54,7 +54,7 @@ export function setupVoiceInterface() {
             const user = room.users.find(u => u.uid === uid);
             if (user) user.isSpeaking = isSpeaking;
 
-            // Em vez de re-renderizar todo o grid por causa do brilho, alteramos direto no DOM por performance
+            // Manipulação direta do DOM por performance (evita re-renderizar o grid inteiro a cada milissegundo)
             const card = document.getElementById(`voice-card-${uid}`);
             if (card) {
                 if (isSpeaking) {
@@ -68,11 +68,12 @@ export function setupVoiceInterface() {
 }
 
 // ==========================================
-// 2. CONTROLE DE HARDWARE (MICROFONE)
+// 2. CONTROLE DE HARDWARE (MICROFONE CORRIGIDO)
 // ==========================================
 async function toggleMicrophone() {
     const btnMute = document.getElementById("btn-mute");
     let stream = appState.localStream;
+    let isInitialSetup = false;
 
     // Se o usuário ainda não permitiu o microfone, solicita acesso
     if (!stream) {
@@ -83,6 +84,7 @@ async function toggleMicrophone() {
             
             // Inicia o monitoramento de volume para a animação
             startAudioAnalyser(stream);
+            isInitialSetup = true; // Sinaliza que a trilha acabou de ser criada ativa
         } catch (error) {
             console.error("[ERRO AUDIO] Permissão negada ou hardware não encontrado:", error);
             return alert("Não foi possível acessar seu microfone. Verifique as permissões do navegador.");
@@ -93,8 +95,13 @@ async function toggleMicrophone() {
     const audioTrack = stream.getAudioTracks()[0];
     if (!audioTrack) return;
 
-    // Alterna o estado de mute do hardware
-    audioTrack.enabled = !audioTrack.enabled;
+    // [CORREÇÃO UX] Se acabou de inicializar, deixa ativado. Se já existia, inverte o estado atual.
+    if (!isInitialSetup) {
+        audioTrack.enabled = !audioTrack.enabled;
+    } else {
+        audioTrack.enabled = true;
+    }
+    
     const isMicOn = audioTrack.enabled;
 
     // Atualiza a UI do botão local
@@ -103,10 +110,10 @@ async function toggleMicrophone() {
         btnMute.classList.toggle("muted-state", !isMicOn);
     }
 
-    // Avisa o servidor para que os outros usuários vejam que você mutou/desmutou
+    // Avisa o servidor para repassar aos outros integrantes da sala
     const room = appState.currentRoom;
     if (room) {
-        socket.emit("toggle_mic", { roomId: room.id, micOn: isMicOn });
+        socket.emit("toggle_mic", { roomId: String(room.id), micOn: isMicOn });
     }
 }
 
@@ -131,24 +138,34 @@ function startAudioAnalyser(stream) {
 
         // Loop de verificação de volume a cada 100ms
         const intervalId = setInterval(() => {
+            // Se o usuário mutou o hardware, poupa processamento e força o estado estável de silêncio
+            const track = stream.getAudioTracks()[0];
+            if (!track || !track.enabled) {
+                if (isCurrentlySpeaking) {
+                    isCurrentlySpeaking = false;
+                    const room = appState.currentRoom;
+                    if (room) socket.emit("is_speaking", { roomId: String(room.id), isSpeaking: false });
+                }
+                return;
+            }
+
             analyser.getByteFrequencyData(dataArray);
             
-            // Calcula a média do volume
             let sum = 0;
             for (let i = 0; i < bufferLength; i++) {
                 sum += dataArray[i];
             }
             const averageVolume = sum / bufferLength;
 
-            // Threshold de sensibilidade (ajuste se necessário)
+            // Sensibilidade do corte (valores acima de 15 indicam captação ativa de voz)
             const speakingNow = averageVolume > 15; 
 
-            // Se o estado mudou, avisa o servidor para acender/apagar o brilho verde
+            // Se o estado mudou (começou ou parou de falar), dispara o evento para o servidor
             if (speakingNow !== isCurrentlySpeaking) {
                 isCurrentlySpeaking = speakingNow;
                 const room = appState.currentRoom;
                 if (room) {
-                    socket.emit("is_speaking", { roomId: room.id, isSpeaking: speakingNow });
+                    socket.emit("is_speaking", { roomId: String(room.id), isSpeaking: speakingNow });
                 }
             }
         }, 100);
@@ -156,7 +173,7 @@ function startAudioAnalyser(stream) {
         appState.setAudioEntity('micInterval', intervalId);
 
     } catch (e) {
-        console.warn("[AUDIO] API de Web Audio não suportada. Animação de voz desabilitada.", e);
+        console.warn("[AUDIO] API de Web Audio não suportada ou bloqueada. Animação desabilitada.", e);
     }
 }
 
@@ -168,19 +185,19 @@ function leaveRoom() {
     if (!room) return;
 
     console.log(`[SALAS] Saindo da sala: ${room.name}`);
-    socket.emit("leave_room", { roomId: room.id });
+    socket.emit("leave_room", { roomId: String(room.id) });
 
     // 1. Limpa o estado da sala global
     appState.setCurrentRoom(null);
 
-    // 2. Desliga o Hardware (Apaga a luz do microfone do navegador)
+    // 2. Desliga o Hardware (Apaga de verdade a luz/ícone de gravação do navegador)
     const stream = appState.localStream;
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         appState.setAudioEntity('localStream', null);
     }
 
-    // 3. Desliga o Analisador de Áudio e limpa intervalos
+    // 3. Desliga o Analisador de Áudio e limpa intervalos de CPU
     const interval = appState.micInterval;
     if (interval) clearInterval(interval);
 
@@ -190,13 +207,13 @@ function leaveRoom() {
         appState.setAudioEntity('audioContext', null);
     }
 
-    // 4. Restaura a UI do botão de mute
+    // 4. Restaura a UI original do botão de mute
     const btnMute = document.getElementById("btn-mute");
     if (btnMute) {
         btnMute.innerText = "Ligar Microfone";
         btnMute.classList.remove("muted-state");
     }
 
-    // 5. Volta para o Dashboard
+    // 5. Redireciona visualmente de volta para o Dashboard
     showScreen("dashboard");
 }

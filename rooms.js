@@ -1,6 +1,6 @@
 "use strict";
 
-// rooms.js - Gerenciamento de Salas, Feed Público e Ingressos Controlados
+// rooms.js - Gerenciamento de Salas, Feed Público e Ingressos Controlados — Pro Version
 
 import { socket, appState } from './main.js';
 import { showScreen, escapeHTML, updateRoomHeader, renderVoiceCards } from './ui.js';
@@ -35,7 +35,7 @@ export function setupRoomCreationInterface() {
         });
     }
 
-    // [PRO FEATURE] Delegação de Eventos para o Feed de Salas
+    // Delegação de Eventos para o Feed de Salas
     if (roomFeedContainer) {
         roomFeedContainer.addEventListener("click", (e) => {
             const card = e.target.closest(".room-card");
@@ -53,17 +53,24 @@ export function setupRoomCreationInterface() {
     // ==========================================
     // ESCUTADORES SOCKET (RESPOSTAS DO SERVIDOR)
     // ==========================================
+    
     // Atualiza a lista de salas na tela
     socket.off("update_room_list").on("update_room_list", renderRoomList);
 
-    // Sucesso ao entrar na sala
-    socket.off("room_joined").on("room_joined", (roomData) => {
+    // [CORREÇÃO] Unificado para escutar 'room_joined_success' alinhado com o main.js e server.js
+    socket.off("room_joined_success").on("room_joined_success", (roomData) => {
         appState.setCurrentRoom(roomData);
         
         // Altera a tela para o modo Call/Sala
         showScreen("room");
         updateRoomHeader(roomData);
         renderVoiceCards(roomData.users, roomData.ownerId);
+
+        // Limpa os inputs do formulário de criação para quando o usuário voltar ao lobby estar limpo
+        clearRoomInputs();
+
+        // Restaura o estado do botão de criação
+        if (btnCreateRoom) resetRoomButton(btnCreateRoom);
 
         console.log(`[SALAS] Você entrou com sucesso na sala: ${roomData.name}`);
     });
@@ -77,7 +84,7 @@ export function setupRoomCreationInterface() {
 }
 
 // ==========================================
-// 2. LÓGICA DE CRIAÇÃO DE SALAS
+// 2. LÓGICA DE CRIAÇÃO DE SALAS (CORRIGIDO)
 // ==========================================
 function createNewRoom(btnElement) {
     const user = appState.currentUser;
@@ -100,18 +107,25 @@ function createNewRoom(btnElement) {
     btnElement.disabled = true;
     btnElement.innerText = "Criando Sala...";
 
+    // [CORREÇÃO CRÍTICA] Injetando o 'creatorInfo' no local correto esperado pelo backend
     const roomPayload = {
-        id: `room_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // ID Único Gerado no Front
+        id: `room_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`, 
         name: nameInput,
         type: typeSelect,
         password: typeSelect === "private" ? passwordInput : null,
         limit: limitSelect || 5,
         ownerId: user.uid,
+        creatorInfo: {
+            uid: user.uid,
+            name: user.name,
+            avatar: user.avatar // Garante o tráfego da foto em Base64 configurada
+        },
         users: []
     };
 
-    console.log("[SALAS] Enviando payload de criação de sala...");
-    socket.emit("create_room", { roomPayload, user });
+    console.log("[SALAS] Enviando payload corrigido de criação de sala...");
+    // Envia o objeto diretamente sem encapsular em chaves redundantes
+    socket.emit("create_room", roomPayload);
 }
 
 // ==========================================
@@ -121,7 +135,7 @@ function renderRoomList(rooms) {
     const container = document.getElementById("rooms-feed");
     if (!container) return;
 
-    if (rooms.length === 0) {
+    if (!rooms || rooms.length === 0) {
         container.innerHTML = `
             <div class="empty-feed">
                 <p>Nenhuma sala ativa no momento. Que tal criar a primeira?</p>
@@ -138,7 +152,6 @@ function renderRoomList(rooms) {
         const maxLimit = room.limit;
         const isPrivate = room.type === "private";
 
-        // Monta o Card de Sala baseado no seu style.css
         const roomCard = document.createElement("div");
         roomCard.className = `room-card ${isPrivate ? 'private' : 'public'}`;
         roomCard.setAttribute("data-room-id", room.id);
@@ -170,16 +183,30 @@ function tryJoinRoom(roomId, isPrivate) {
 
     if (isPrivate) {
         typedPassword = prompt("Esta sala é privada. Digite a senha de acesso:");
-        if (typedPassword === null) return; // Usuário cancelou o prompt
+        if (typedPassword === null) return; 
         if (typedPassword.trim() === "") return alert("A senha não pode ser vazia!");
     }
 
     console.log(`[SALAS] Tentando ingressar na sala ${roomId}...`);
-    socket.emit("join_room", { roomId, password: typedPassword, user });
+    socket.emit("join_room", { roomId: String(roomId), password: typedPassword, user });
 }
 
-// Auxiliar para resetar interface
+// ==========================================
+// 5. AUXILIARES DE LIMPEZA E INTERFACE
+// ==========================================
 function resetRoomButton(btn) {
     btn.disabled = false;
     btn.innerText = "Criar Sala";
+}
+
+function clearRoomInputs() {
+    const nameInput = document.getElementById("room-name");
+    const passwordInput = document.getElementById("room-password");
+    const groupRoomPassword = document.getElementById("group-room-password");
+    const typeSelect = document.getElementById("room-type");
+
+    if (nameInput) nameInput.value = "";
+    if (passwordInput) passwordInput.value = "";
+    if (typeSelect) typeSelect.value = "public";
+    if (groupRoomPassword) groupRoomPassword.style.display = "none";
 }

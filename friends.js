@@ -1,6 +1,6 @@
 "use strict";
 
-// friends.js - Sistema de Amizades, Status Online e Solicitações
+// friends.js - Sistema de Amizades, Status Online e Solicitações — Pro Version
 
 import { socket, appState } from './main.js';
 import { escapeHTML } from './ui.js';
@@ -29,7 +29,7 @@ export function setupFriendsInterface() {
         });
     }
 
-    // [PRO] Delegação de Eventos para Aceitar/Recusar/Remover amigos
+    // Delegação de Eventos para Aceitar/Recusar/Remover amigos
     if (requestsContainer) {
         requestsContainer.addEventListener("click", (e) => {
             const btn = e.target;
@@ -69,10 +69,9 @@ export function setupFriendsInterface() {
         renderFriendRequests(requestsList);
     });
 
-    // Notificações em tempo real
+    // Notificações em tempo real (Mudança de alertas repetitivos para logs limpos se necessário)
     socket.off("friend_notification").on("friend_notification", (message) => {
-        // Pode ser trocado por um sistema de Toast (Notificação flutuante)
-        console.log(`[SOCIAL] ${message}`);
+        console.log(`[SOCIAL] Notificação recebida: ${message}`);
         alert(`Sistema de Amigos: ${message}`);
     });
 }
@@ -88,14 +87,14 @@ function sendFriendRequest(targetUid, btnElement) {
     
     if (targetUid === user.uid) return alert("Você não pode adicionar a si mesmo!");
 
-    // Trava o botão temporariamente (Prevenção de spam)
+    // Trava o botão temporariamente (Prevenção de spam / flood de pacotes)
     const originalText = btnElement.innerText;
     btnElement.disabled = true;
     btnElement.innerText = "Enviando...";
 
     socket.emit("send_friend_request", { senderUid: user.uid, targetUid: targetUid });
 
-    // Destrava após 1.5s
+    // Destrava após 1.5s e limpa o campo
     setTimeout(() => {
         btnElement.disabled = false;
         btnElement.innerText = originalText;
@@ -119,7 +118,7 @@ function removeFriend(targetUid, btnElement) {
     if (!user) return;
 
     btnElement.disabled = true;
-    btnElement.innerText = "Removendo...";
+    btnElement.innerText = "...";
     
     socket.emit("remove_friend", { myUid: user.uid, targetUid: targetUid });
 }
@@ -139,10 +138,9 @@ function renderFriendsList(friends) {
     }
 
     container.innerHTML = ""; // Limpa a lista atual
-    
     let onlineCount = 0;
 
-    // Ordena para que amigos online fiquem no topo da lista
+    // Ordena para que amigos online fiquem sempre no topo da lista
     const sortedFriends = friends.sort((a, b) => b.isOnline - a.isOnline);
 
     sortedFriends.forEach(friend => {
@@ -150,16 +148,18 @@ function renderFriendsList(friends) {
 
         const safeName = escapeHTML(friend.name);
         const safeUid = escapeHTML(friend.uid);
-        const safeAvatar = escapeHTML(friend.avatar || "user-photo.jpg");
         const statusClass = friend.isOnline ? "status-online" : "status-offline";
         const statusText = friend.isOnline ? "Online" : "Offline";
+
+        // [CORREÇÃO] Ignorando o escapeHTML na string Base64 para evitar a quebra do hash da imagem
+        const rawAvatar = friend.avatar || "user-photo.jpg";
 
         const card = document.createElement("div");
         card.className = "friend-card";
         
         card.innerHTML = `
             <div class="friend-avatar-wrapper">
-                <img src="${safeAvatar}" alt="${safeName}" onerror="this.src='user-photo.jpg'">
+                <img src="${rawAvatar}" alt="${safeName}" onerror="this.src='user-photo.jpg'">
                 <div class="status-indicator ${statusClass}"></div>
             </div>
             <div class="friend-info">
@@ -199,13 +199,15 @@ function renderFriendRequests(requests) {
     requests.forEach(req => {
         const safeName = escapeHTML(req.name);
         const safeUid = escapeHTML(req.uid);
-        const safeAvatar = escapeHTML(req.avatar || "user-photo.jpg");
+        
+        // [CORREÇÃO] Mantendo a string Base64 do avatar intacta
+        const rawAvatar = req.avatar || "user-photo.jpg";
 
         const card = document.createElement("div");
         card.className = "friend-request-card";
         
         card.innerHTML = `
-            <img src="${safeAvatar}" alt="${safeName}" class="req-avatar" onerror="this.src='user-photo.jpg'">
+            <img src="${rawAvatar}" alt="${safeName}" class="req-avatar" onerror="this.src='user-photo.jpg'">
             <div class="req-info">
                 <span class="req-name">${safeName}</span>
                 <span class="req-uid">quer ser seu amigo(a)</span>

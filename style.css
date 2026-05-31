@@ -2,274 +2,472 @@
    1. VARIÁVEIS GLOBAIS (DESIGN SYSTEM)
    ========================================== */
 :root {
-    /* Paleta de Cores (Dark Theme) */
-    --bg-base: #18181b;       /* Fundo mais escuro (telas) */
-    --bg-surface: #27272a;    /* Fundo de painéis e cards */
-    --bg-surface-hover: #3f3f46;
+    /* Paleta de Cores (Dark Premium Theme) */
+    --bg-base: #09090b;           /* Fundo absoluto da aplicação */
+    --bg-surface: #18181b;        /* Fundo de painéis, blocos e cards */
+    --bg-surface-hover: #27272a;  /* Estados de hover em containers */
+    --bg-element: #3f3f46;        /* Bordas secundárias e inputs internos */
     
-    --text-main: #f4f4f5;     /* Texto principal branco/gelo */
-    --text-muted: #a1a1aa;    /* Texto secundário cinza */
+    --text-main: #f4f4f5;         /* Texto principal de alta leitura */
+    --text-muted: #a1a1aa;        /* Subtítulos e metadados */
     
-    --brand-primary: #6366f1; /* Roxo/Azul moderno */
+    --brand-primary: #6366f1;     /* Roxo Indigo principal */
     --brand-primary-hover: #4f46e5;
+    --brand-glow: rgba(99, 102, 241, 0.15);
     
-    --status-online: #22c55e; /* Verde ativo/falando */
-    --status-offline: #ef4444;/* Vermelho mutado/erro */
-    --status-warning: #f59e0b;
+    --status-online: #22c55e;     /* Ativo, microfone aberto ou online */
+    --status-offline: #ef4444;    /* Mutado, offline ou erro */
+    --status-warning: #f59e0b;    /* Salas privadas / pendências */
     
-    /* Espaçamentos e Bordas */
-    --radius-md: 8px;
-    --radius-lg: 12px;
+    /* Espaçamentos, Cantos e Transições */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
     --radius-full: 9999px;
-    --transition-speed: 0.2s;
+    --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --speed: 0.2s;
 }
 
 /* ==========================================
-   2. RESET E ESTILOS BASE
+   2. RESET INTEGRAL E COMPORTAMENTO BASE
    ========================================== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
     background-color: var(--bg-base);
     color: var(--text-main);
     height: 100vh;
-    overflow: hidden; /* Evita rolagem na página inteira */
+    height: 100dvh; /* Previne bugs com barras de navegação mobile */
+    overflow: hidden; 
 }
 
+/* Customização de Scrollbars (Visual Dark Unificado) */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--bg-element);
+    border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Elementos Interativos Intermediários */
 button {
     cursor: pointer;
     border: none;
     background: none;
-    transition: all var(--transition-speed) ease;
+    font-size: inherit;
+    color: inherit;
+    transition: all var(--speed) var(--transition-smooth);
 }
 
-input, select {
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+}
+
+input, select, textarea {
     background-color: var(--bg-base);
     border: 1px solid var(--bg-surface-hover);
     color: var(--text-main);
-    padding: 10px;
+    padding: 12px 16px;
     border-radius: var(--radius-md);
+    font-size: 0.95rem;
     outline: none;
+    transition: border-color var(--speed) var(--transition-smooth), box-shadow var(--speed) var(--transition-smooth);
 }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
     border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px var(--brand-glow);
+}
+
+input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Utilitário Absoluto de Ocultação */
+.hidden {
+    display: none !important;
 }
 
 /* ==========================================
-   3. GERENCIAMENTO DE TELAS (UI.JS)
+   3. ESTRUTURA GLOBAL DE TELAS
    ========================================== */
 .screen {
     width: 100%;
     height: 100vh;
-    display: none; /* Controlado pelo ui.js */
+    height: 100dvh;
+    display: none; /* Controlado exclusivamente pelas chaves do ui.js */
 }
 
 /* ==========================================
-   4. TELA DE AUTENTICAÇÃO
+   4. TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO)
    ========================================== */
 #screen-login {
-    /* Exibido como flex pelo ui.js */
     align-items: center;
     justify-content: center;
+    padding: 20px;
+    background: radial-gradient(circle at top right, var(--brand-glow), transparent 45%);
 }
 
 .auth-container {
     background-color: var(--bg-surface);
-    padding: 2.5rem;
+    padding: 2.5rem 2rem;
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 400px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    max-width: 420px;
+    border: 1px solid var(--bg-surface-hover);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
 }
 
 .auth-tabs {
     display: flex;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     border-bottom: 2px solid var(--bg-surface-hover);
 }
 
 .auth-tabs button {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     color: var(--text-muted);
-    font-weight: bold;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
 }
 
 .auth-tabs button.active {
     color: var(--brand-primary);
-    border-bottom: 2px solid var(--brand-primary);
+    border-bottom-color: var(--brand-primary);
 }
 
 .input-group {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-bottom: 1.5rem;
+    gap: 16px;
+    margin-bottom: 2rem;
 }
 
 .btn-primary {
     width: 100%;
     background-color: var(--brand-primary);
-    color: white;
-    padding: 12px;
+    color: #ffffff;
+    padding: 14px;
     border-radius: var(--radius-md);
-    font-weight: bold;
+    font-weight: 700;
     font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     background-color: var(--brand-primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 /* ==========================================
-   5. TELA DASHBOARD (HOME)
+   5. TELA DASHBOARD (LOBBY SOCIAL)
    ========================================== */
 #screen-dashboard {
-    /* Exibido como grid pelo ui.js */
-    grid-template-columns: 280px 1fr 300px; /* Sidebar | Feed | Friends */
+    grid-template-columns: 280px 1fr 320px;
 }
 
-/* Sidebar de Perfil */
+/* Painel Lateral Esquerdo (Perfil e Controles locais) */
 .sidebar {
     background-color: var(--bg-surface);
-    padding: 20px;
+    padding: 24px 20px;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid var(--bg-base);
+    border-right: 1px solid var(--bg-surface-hover);
 }
 
 .profile-card {
     display: flex;
     align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: 14px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--bg-surface-hover);
+    margin-bottom: 24px;
 }
 
 #sidebar-avatar {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     border-radius: var(--radius-full);
     object-fit: cover;
-    background-color: var(--bg-surface-hover);
+    background-color: var(--bg-element);
+    border: 2px solid var(--bg-surface-hover);
 }
 
-/* Feed de Salas */
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.profile-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-uid {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Seção Central - Feed de Salas */
 .main-feed {
-    padding: 20px;
+    padding: 24px;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.feed-title {
+    font-size: 1.5rem;
+    font-weight: 700;
 }
 
 .create-room-panel {
     background-color: var(--bg-surface);
     padding: 20px;
     border-radius: var(--radius-lg);
-    margin-bottom: 20px;
+    border: 1px solid var(--bg-surface-hover);
     display: flex;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.create-room-panel input, 
+.create-room-panel select {
+    flex: 1;
+    min-width: 160px;
+}
+
+.create-room-panel .btn-primary {
+    width: auto;
+    padding: 12px 24px;
+    white-space: nowrap;
 }
 
 #rooms-feed {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
 }
 
+/* Cards do Feed de Salas */
 .room-card {
     background-color: var(--bg-surface);
-    border-radius: var(--radius-md);
-    padding: 15px;
-    border: 1px solid transparent;
-    transition: transform 0.2s;
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--bg-surface-hover);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 160px;
 }
 
 .room-card:hover {
-    transform: translateY(-2px);
     border-color: var(--brand-primary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
 }
 
 .room-card-header {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8rem;
-    margin-bottom: 10px;
+    align-items: center;
+    margin-bottom: 12px;
 }
 
 .room-card-badge {
-    background-color: var(--brand-primary);
-    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
     border-radius: var(--radius-full);
+    background-color: rgba(99, 102, 241, 0.15);
+    color: var(--brand-primary);
 }
 
-.room-card-badge.private { background-color: var(--status-warning); }
+.room-card-badge.private {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: var(--status-warning);
+}
+
+.room-card-counter {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.room-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 .btn-join-action {
-    margin-top: 15px;
     width: 100%;
-    padding: 8px;
+    padding: 10px;
     background-color: var(--bg-surface-hover);
-    color: white;
+    color: var(--text-main);
+    font-weight: 600;
     border-radius: var(--radius-md);
+    text-align: center;
 }
 
-.btn-join-action:hover { background-color: var(--brand-primary); }
+.room-card:hover .btn-join-action {
+    background-color: var(--brand-primary);
+    color: #ffffff;
+}
+
+.empty-feed {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
 
 /* ==========================================
-   6. TELA DA SALA (VOZ E CHAT)
+   6. TELA DA SALA (STREAMS E CHAT COLETIVO)
    ========================================== */
 #screen-room {
-    /* Exibido como grid pelo ui.js */
-    grid-template-columns: 1fr 350px; /* Área de Voz | Chat */
+    grid-template-columns: 1fr 360px;
 }
 
 .voice-area {
-    padding: 20px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .room-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--bg-surface-hover);
+    margin-bottom: 24px;
+    gap: 16px;
 }
 
+.room-header-meta {
+    overflow: hidden;
+}
+
+#room-title-display {
+    font-size: 1.4rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.room-control-buttons {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.btn-control {
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--bg-surface-hover);
+}
+
+.btn-control:hover {
+    background-color: var(--bg-surface-hover);
+}
+
+.btn-control.muted-state {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: var(--status-offline);
+    color: var(--status-offline);
+}
+
+#btn-leave-room {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-color: transparent;
+    color: #f87171;
+}
+
+#btn-leave-room:hover {
+    background-color: var(--status-offline);
+    color: #ffffff;
+}
+
+/* Grade de Integrantes Conectados por Áudio */
 #voice-subscribers-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 20px;
-    flex-grow: 1;
     align-content: start;
+    flex-grow: 1;
 }
 
-/* Cards de Voz e Efeito Verde (Falando) */
 .voice-card {
     background-color: var(--bg-surface);
-    padding: 20px;
+    padding: 24px 16px;
     border-radius: var(--radius-lg);
     text-align: center;
-    position: relative;
     border: 2px solid transparent;
-    transition: all 0.1s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-/* [O SEGREDO DO BRILHO VERDE DO VOICE.JS] */
+/* Animação e efeito Pulsante do Web Audio API (is_speaking) */
 .voice-card.speaking {
     border-color: var(--status-online);
-    box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 20px rgba(34, 197, 148, 0.25);
+    animation: voicePulse 1.6s infinite ease-in-out;
+}
+
+@keyframes voicePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
 }
 
 .avatar-wrapper {
     position: relative;
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 15px;
+    width: 76px;
+    height: 76px;
+    margin-bottom: 14px;
 }
 
 .voice-avatar {
@@ -277,14 +475,16 @@ input:focus, select:focus {
     height: 100%;
     border-radius: var(--radius-full);
     object-fit: cover;
+    border: 2px solid var(--bg-surface-hover);
+    background-color: var(--bg-element);
 }
 
 .mic-indicator-dot {
     position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 20px;
-    height: 20px;
+    bottom: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
     border-radius: var(--radius-full);
     border: 3px solid var(--bg-surface);
 }
@@ -292,14 +492,25 @@ input:focus, select:focus {
 .mic-indicator-dot.on { background-color: var(--status-online); }
 .mic-indicator-dot.off { background-color: var(--status-offline); }
 
+.voice-username {
+    font-size: 0.9rem;
+    font-weight: 600;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-main);
+}
+
 /* ==========================================
-   7. BATE-PAPO (CHAT)
+   7. PROJETO DO CHAT DA SALA
    ========================================== */
 .chat-area {
     background-color: var(--bg-surface);
     display: flex;
     flex-direction: column;
     border-left: 1px solid var(--bg-base);
+    height: 100%;
 }
 
 #chat-messages-container {
@@ -308,12 +519,12 @@ input:focus, select:focus {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 16px;
 }
 
 .chat-message {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     max-width: 85%;
 }
 
@@ -323,88 +534,283 @@ input:focus, select:focus {
 }
 
 .chat-msg-avatar {
-    width: 35px;
-    height: 35px;
+    width: 36px;
+    height: 36px;
     border-radius: var(--radius-full);
+    object-fit: cover;
+    flex-shrink: 0;
+    background-color: var(--bg-element);
 }
 
 .chat-msg-content {
     background-color: var(--bg-base);
-    padding: 10px 15px;
+    padding: 10px 14px;
     border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    word-break: break-word; /* Evita quebra de caixa por floods ou links longos */
 }
 
 .msg-mine .chat-msg-content {
     background-color: var(--brand-primary);
+    color: #ffffff;
 }
 
 .chat-msg-header {
     display: flex;
-    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
     font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-bottom: 5px;
+    margin-bottom: 4px;
 }
 
-.msg-mine .chat-msg-header {
-    color: #e0e7ff;
+.chat-msg-name {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.msg-mine .chat-msg-name {
+    color: #ffffff;
+}
+
+.chat-msg-time {
+    color: var(--text-muted);
+}
+
+.msg-mine .chat-msg-time {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.chat-msg-text {
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .chat-input-area {
-    padding: 15px;
+    padding: 16px;
     display: flex;
     gap: 10px;
     border-top: 1px solid var(--bg-base);
+    background-color: var(--bg-surface);
 }
 
 .chat-input-area input {
     flex-grow: 1;
 }
 
+.chat-input-area .btn-primary {
+    width: auto;
+    padding: 0 20px;
+}
+
 /* ==========================================
-   8. SISTEMA DE AMIGOS (FRIENDS)
+   8. ABA LATERAL SOCIAL E SISTEMA DE AMIGOS
    ========================================== */
 .friends-panel {
     background-color: var(--bg-surface);
-    border-left: 1px solid var(--bg-base);
+    border-left: 1px solid var(--bg-surface-hover);
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 24px 20px;
+    height: 100%;
+}
+
+.section-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.social-scroll-section {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
 }
 
 .friend-card, .friend-request-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px;
+    gap: 12px;
+    padding: 12px;
     background-color: var(--bg-base);
     border-radius: var(--radius-md);
     margin-bottom: 10px;
+    border: 1px solid transparent;
+}
+
+.friend-card:hover {
+    border-color: var(--bg-surface-hover);
 }
 
 .friend-avatar-wrapper, .req-avatar {
     position: relative;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-full);
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
 }
 
-.friend-info {
+.friend-avatar-wrapper img, .req-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    background-color: var(--bg-element);
+}
+
+.friend-info, .req-info {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    font-size: 0.9rem;
+    overflow: hidden;
+    font-size: 0.85rem;
 }
+
+.friend-name, .req-name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-uid, .req-uid {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-status {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.friend-status.status-online { color: var(--status-online); }
+.friend-status.status-offline { color: var(--text-muted); }
 
 .status-indicator {
     position: absolute;
-    bottom: 0;
-    right: 0;
+    bottom: -1px;
+    right: -1px;
     width: 12px;
     height: 12px;
     border-radius: var(--radius-full);
     border: 2px solid var(--bg-base);
 }
 
-.status-online { background-color: var(--status-online); color: var(--status-online); }
-.status-offline { background-color: var(--status-offline); color: var(--status-offline); }
+.friend-actions, .req-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.friend-actions button, .req-actions button {
+    padding: 6px;
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+}
+
+.friend-actions button:hover, .req-actions button:hover {
+    background-color: var(--bg-surface-hover);
+}
+
+.friend-requests-wrapper {
+    border-top: 1px solid var(--bg-surface-hover);
+    padding-top: 20px;
+    max-height: 220px;
+    display: flex;
+    flex-direction: column;
+}
+
+.empty-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 16px 0;
+}
+
+/* ==========================================
+   9. MEDIA QUERIES (COMPATIBILIDADE MOBILE & TABLET)
+   ========================================== */
+
+/* Quebra para Notebooks Pequenos e Tablets de Alta Resolução */
+@media (max-width: 1200px) {
+    #screen-dashboard {
+        grid-template-columns: 240px 1fr; /* Esconde ou empilha o painel de amigos */
+    }
+    .friends-panel {
+        display: none; /* Em sistemas Pro robustos vira uma gaveta lateral separada */
+    }
+}
+
+/* Quebra Crítica: Tablets Orientação Retrato e Smartphones Grandes */
+@media (max-width: 900px) {
+    #screen-room {
+        grid-template-columns: 1fr; /* Transforma áudio e chat em empilhamento vertical */
+        grid-template-rows: 1fr 340px;
+    }
+    .chat-area {
+        border-left: none;
+        border-top: 1px solid var(--bg-base);
+    }
+}
+
+/* Celulares de Qualquer Resolução (Mobile-First Adaptive Stack) */
+@media (max-width: 768px) {
+    #screen-dashboard {
+        grid-template-columns: 1fr; /* Coluna única absoluta */
+        grid-template-rows: auto 1fr;
+    }
+
+    .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--bg-surface-hover);
+        padding: 16px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .profile-card {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .create-room-panel {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .create-room-panel input, 
+    .create-room-panel select,
+    .create-room-panel .btn-primary {
+        width: 100%;
+    }
+
+    .room-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .room-control-buttons {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .btn-control {
+        text-align: center;
+        justify-content: center;
+    }
+}
