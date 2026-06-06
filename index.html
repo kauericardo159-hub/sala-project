@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sala Project — Nova Era</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="auth-screen" class="auth-overlay" style="display: flex;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>Sala Project</h2>
+                <p id="auth-subtitle">Conecte-se ao ecossistema global.</p>
+            </div>
+            <div class="auth-tabs">
+                <button id="tab-login" class="active">Entrar</button>
+                <button id="tab-register">Registrar</button>
+            </div>
+            <form id="auth-form">
+                <div class="input-container">
+                    <label for="auth-username">@username</label>
+                    <input type="text" id="auth-username" placeholder="usuario" autocomplete="off" required spellcheck="false">
+                </div>
+                <div class="input-container" id="group-displayname" style="display: none;">
+                    <label for="auth-displayname">Nome de Exibição</label>
+                    <input type="text" id="auth-displayname" placeholder="Seu Nome">
+                </div>
+                <div class="input-container">
+                    <label for="auth-password">Sua Senha</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="btn-auth-submit" class="btn-primary">Acessar Plataforma</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-container" class="main-layout" style="display: none;">
+        
+        <nav class="navigation-bar">
+            <div class="nav-brand">S_P</div>
+            <div class="nav-tabs-wrapper">
+                <button class="nav-btn active" data-target="view-profile" title="Meu Perfil">👤</button>
+                <button class="nav-btn" data-target="view-friends" title="Lista de Amigos">👥</button>
+                <button class="nav-btn" data-target="view-messages" title="Mensagens Diretas">💬</button>
+                <button class="nav-btn" data-target="view-lobby" title="Lobby de Salas">🌐</button>
+                <button class="nav-btn" data-target="view-room-active" id="nav-btn-room" title="Sala Ativa" style="display: none;">🔊</button>
+            </div>
+            <button id="btn-global-logout" class="nav-btn-logout" title="Sair da Conta">🚪</button>
+        </nav>
+
+        <main class="content-viewport">
+            
+            <section id="view-profile" class="app-view active">
+                <div class="view-header"><h2>Meu Perfil</h2></div>
+                <div class="profile-setup-box">
+                    <label for="avatar-uploader" class="avatar-change-trigger">
+                        <img id="my-profile-avatar" src="user-photo.jpg" alt="Avatar">
+                        <div class="avatar-overlay-text">Alterar</div>
+                    </label>
+                    <input type="file" id="avatar-uploader" accept="image/*" style="display: none;">
+                    <div class="profile-meta-data">
+                        <h3 id="my-profile-name">Carregando Nome...</h3>
+                        <span id="my-profile-tag">@user#0000</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-friends" class="app-view">
+                <div class="view-header"><h2>Sistema de Amigos</h2></div>
+                <div class="friend-add-bar">
+                    <input type="text" id="input-friend-id" placeholder="Buscar por @user#0000" autocomplete="off" spellcheck="false">
+                    <button id="btn-add-friend" class="btn-primary">Enviar Convite</button>
+                </div>
+                <div class="friends-sub-section">
+                    <h4>Solicitações Pendentes (<span id="count-requests">0</span>)</h4>
+                    <div id="container-friend-requests"></div>
+                </div>
+                <div class="friends-sub-section">
+                    <h4>Meus Amigos</h4>
+                    <div id="container-friends-list"></div>
+                </div>
+            </section>
+
+            <section id="view-messages" class="app-view">
+                <div class="view-header"><h2>Conversas Privadas</h2></div>
+                <div class="dm-layout-grid">
+                    <div id="dm-active-chats-sidebar" class="sub-sidebar"></div>
+                    <div class="dm-chat-box">
+                        <div id="dm-messages-container" class="messages-scroll"></div>
+                        <div class="input-area-chat">
+                            <input type="text" id="input-dm-message" placeholder="Escreva uma mensagem privada..." autocomplete="off">
+                            <button id="btn-send-dm" class="btn-primary">Enviar</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-lobby" class="app-view">
+                <div class="view-header"><h2>Salas Disponíveis</h2></div>
+                <div class="lobby-action-row">
+                    <input type="text" id="room-create-name" placeholder="Nome da Nova Sala" max-length="25">
+                    <select id="room-create-type">
+                        <option value="public">Pública</option>
+                        <option value="private">Privada</option>
+                    </select>
+                    <input type="password" id="room-create-password" placeholder="Senha (Se Privada)" style="display: none;">
+                    <input type="number" id="room-create-limit" value="8" min="2" max="50" style="max-width: 80px;">
+                    <button id="btn-submit-create-room" class="btn-primary">Criar Sala</button>
+                </div>
+                <div id="lobby-rooms-grid" class="rooms-grid-container"></div>
+            </section>
+
+            <section id="view-room-active" class="app-view">
+                <div class="room-active-layout">
+                    
+                    <div class="room-voice-pane">
+                        <div class="room-active-header">
+                            <h3 id="active-room-title">Carregando Sala...</h3>
+                            <div class="room-action-buttons">
+                                <button id="btn-room-mute" class="btn-control-node">Ativar Microfone</button>
+                                <button id="btn-room-leave" class="btn-control-node danger">Desconectar</button>
+                            </div>
+                        </div>
+                        <div id="room-users-voice-grid" class="voice-cards-grid"></div>
+                    </div>
+
+                    <div class="room-chat-pane">
+                        <div class="room-chat-title">Chat de Texto da Sala</div>
+                        <div id="room-chat-messages" class="messages-scroll"></div>
+                        <div class="input-area-chat">
+                            <input type="text" id="input-room-chat-message" placeholder="Fale com os integrantes da sala..." autocomplete="off">
+                            <button id="btn-send-room-chat" class="btn-primary">Enviar</button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+    <script type="module" src="main.js"></script>
+
+</body>
+</html>
