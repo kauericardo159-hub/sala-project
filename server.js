@@ -10,14 +10,13 @@ const Banco = require('./bancos');
 const path = require('path');
 
 const app = express();
-const GITHUB_PAGES_URL = "https://kauericardo159-hub.github.io";
 
 app.use(express.static(__dirname)); 
 app.use(cors({ origin: "*" }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    maxHttpBufferSize: 1e7, // 10MB para fotos em Base64
+    maxHttpBufferSize: 1e7, // 10MB para fotos em Base64 estáveis
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
@@ -25,12 +24,13 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html')); 
 });
 
-// Sincronizadores Auxiliares de Redundância
+// Sincronizadores Auxiliares de Redundância Social
 async function syncFriends(uid) {
     const list = await Banco.getPopulatedFriendsList(uid);
+    const requests = await Banco.getPopulatedRequestsList(uid);
     const session = Banco.bancoDadosVolatil.sessions[uid];
     if (session && session.socketId) {
-        io.to(session.socketId).emit('friends_sync_data', { friends: list, requests: await Banco.getPopulatedRequestsList(uid) });
+        io.to(session.socketId).emit('friends_sync_data', { friends: list, requests: requests });
     }
 }
 
@@ -50,6 +50,11 @@ io.on('connection', (socket) => {
             Banco.setUserOnlineStatus(res.user.uid, true, socket.id);
             socket.emit('auth_response', res);
             await syncFriends(res.user.uid);
+            
+            // Avisa os amigos que entrei online
+            if (res.user.friends) {
+                res.user.friends.forEach(fUid => syncFriends(fUid));
+            }
         } else {
             socket.emit('auth_response', res);
         }
@@ -79,7 +84,7 @@ io.on('connection', (socket) => {
     });
 
     // ==========================================
-    // 3. ECOSSISTEMA DE SALAS (O PONTO CRÍTICO)
+    // 3. ECOSSISTEMA DE SALAS
     // ==========================================
     socket.on('get_rooms_list', () => {
         socket.emit('rooms_list_update', Banco.getPublicRoomsList());
@@ -97,15 +102,13 @@ io.on('connection', (socket) => {
         const session = Banco.bancoDadosVolatil.sessions[uid];
         if (!session) return socket.emit('join_room_response', { success: false, message: "Sessão inválida." });
 
-        // Busca dados completos do usuário para injetar na memória da sala
-        const userList = await Banco.getPopulatedFriendsList(uid); 
-        const me = await Banco.loginAccount(uid.split('_')[0], ""); // Puxada rápida fallback
+        const me = await Banco.loginAccount(uid.split('_')[0], ""); 
         
         const profilePayload = {
             uid: uid,
             username: uid.split('_')[0],
-            displayName: me.user ? me.user.displayName : uid,
-            avatarUrl: me.user ? me.user.avatarUrl : "user-photo.jpg",
+            displayName: me.success ? me.user.displayName : uid,
+            avatarUrl: me.success ? me.user.avatarUrl : "user-photo.jpg",
             socketId: socket.id
         };
 
@@ -119,7 +122,6 @@ io.on('connection', (socket) => {
             socket.join(String(roomId));
             socket.emit('join_room_response', { success: true, room: res.room });
             
-            // Transmite imediatamente a atualização do painel de voz para todos na sala
             io.to(String(roomId)).emit('room_state_broadcast', res.room);
             io.emit('rooms_list_update', Banco.getPublicRoomsList());
         } else {
@@ -128,7 +130,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_room_chat_message', ({ roomId, senderUid, displayName, text }) => {
-        // Envia o texto acoplado na mesma hora para todos que estão assistindo a sala ativa
         io.to(String(roomId)).emit('receive_room_chat_message', { senderUid, displayName, text });
     });
 
@@ -151,12 +152,45 @@ io.on('connection', (socket) => {
     });
 
     // ==========================================
-    // 4. ATUALIZAÇÕES EXTRA E DIRECT MESSAGES
+    // 4. ATUALIZAÇÕES UNIFICADAS DE PERFIL
     // ==========================================
+    
+    // Alvo 1: Atualização parcial/completa por formulários (Nome e/ou Foto)
+    socket.on('update_user_profile', async ({ roomId, user }) => {
+        if (!user || !user.uid) return;
+
+        const safeAccount = await Banco.updateAccountProfile(user.uid, user.name, user.avatar);
+
+        if (safeAccount) {
+            // Se estiver em uma sala, atualiza e espalha a modificação para o painel de voz
+            if (roomId) {
+                const room = Banco.findRoomById(String(roomId));
+                if (room) {
+                    io.to(String(roomId)).emit('room_state_broadcast', room);
+                }
+            }
+            
+            // Notifica amigos online
+            const me = await Banco.loginAccount(user.uid.split('_')[0], "");
+            if (me.success && me.user.friends) {
+                me.user.friends.forEach(fUid => syncFriends(fUid));
+            }
+
+            socket.emit('profile_updated_success', safeAccount);
+        }
+    });
+
+    // Alvo 2: Atalho direto para upload de avatar na aba de perfil
     socket.on('update_avatar', async ({ uid, avatar }) => {
-        const res = await Banco.updateAccountProfile(uid, null, avatar);
-        if (res) {
+        const safeAccount = await Banco.updateAccountProfile(uid, null, avatar);
+        if (safeAccount) {
             socket.emit('profile_updated', { success: true, avatarUrl: avatar });
+            socket.emit('profile_updated_success', safeAccount);
+            
+            const me = await Banco.loginAccount(uid.split('_')[0], "");
+            if (me.success && me.user.friends) {
+                me.user.friends.forEach(fUid => syncFriends(fUid));
+            }
         }
     });
 
@@ -164,6 +198,11 @@ io.on('connection', (socket) => {
         const { affectedRoom, foundUid } = Banco.removeUserFromAllRooms(socket.id);
         if (affectedRoom) {
             io.to(String(affectedRoom.id)).emit('room_state_broadcast', affectedRoom);
+        }
+        if (foundUid) {
+            Banco.getPopulatedFriendsList(foundUid).then(friends => {
+                if (friends) friends.forEach(f => syncFriends(f.uid));
+            }).catch(e => console.log(e.message));
         }
         io.emit('rooms_list_update', Banco.getPublicRoomsList());
     });

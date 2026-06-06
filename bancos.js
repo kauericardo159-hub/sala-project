@@ -88,7 +88,7 @@ const BancoController = {
             return { success: true, user: { uid: permanentUid, username: formattedUsername, displayName: formattedUsername, avatarUrl: "user-photo.jpg", tag: randomId } };
         }
 
-        if (account.password !== password) return { success: false, message: "Senha incorreta!" };
+        if (password !== "" && account.password !== password) return { success: false, message: "Senha incorreta!" };
 
         const parts = account.uid.split('_');
         const tag = parts[parts.length - 1] || "0000";
@@ -109,8 +109,8 @@ const BancoController = {
 
     async updateAccountProfile(uid, newName, newAvatar) {
         const updates = {};
-        if (newName) updates.name = newName;
-        if (newAvatar) updates.avatar = newAvatar;
+        if (newName !== null && newName !== undefined) updates.name = newName;
+        if (newAvatar !== null && newAvatar !== undefined) updates.avatar = newAvatar;
 
         const { data, error } = await supabase
             .from('accounts')
@@ -124,11 +124,12 @@ const BancoController = {
             return null;
         }
 
+        // Sincroniza em tempo real as propriedades nas salas ativas em RAM
         bancoDadosVolatil.rooms.forEach(room => {
             const userInRoom = room.users.find(u => u.uid === uid);
             if (userInRoom) {
-                if (newName) userInRoom.displayName = newName;
-                if (newAvatar) userInRoom.avatarUrl = newAvatar;
+                if (updates.name) userInRoom.displayName = updates.name;
+                if (updates.avatar) userInRoom.avatarUrl = updates.avatar;
             }
         });
 
@@ -277,6 +278,8 @@ const BancoController = {
             });
         } else {
             exist.socketId = userProfile.socketId;
+            exist.displayName = userProfile.displayName;
+            exist.avatarUrl = userProfile.avatarUrl;
         }
         return { success: true, room };
     },
