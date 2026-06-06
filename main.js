@@ -9,7 +9,7 @@ import { setupNavigation } from './ui-navigation.js';
 // 1. INICIALIZAÇÃO DO WEBSOCKET
 // ==========================================
 // Altere para a URL correta do seu servidor Node de produção se necessário
-export const socket = io("http://localhost:3000", {
+export const socket = io("https://sala-project.onrender.com", {
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: 10,
