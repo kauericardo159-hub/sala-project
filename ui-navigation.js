@@ -2,7 +2,7 @@
 
 // ui-navigation.js - Controle de Fluxo de Telas e Navegação Responsiva
 
-import { appState } from './main.js';
+import { appState, socket } from './main.js';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DOS ESCUTADORES DE NAVEGAÇÃO
@@ -71,6 +71,19 @@ export function changeView(viewId) {
 // ==========================================
 function executeGlobalLogout() {
     console.log("[AUTH] Limpando persistência de dados locais...");
+    
+    // TRAVA REMOTA: Se o usuário estiver deslogando de dentro de uma sala, avisa o servidor antes de resetar o app
+    if (appState.activeRoom && appState.currentUser) {
+        socket.emit('leave_room', { 
+            roomId: appState.activeRoom.id, 
+            uid: String(appState.currentUser.uid) 
+        });
+    }
+
+    // Desconecta o socket de forma limpa
+    if (socket && socket.connected) {
+        socket.disconnect();
+    }
     
     // Remove os tokens do cache e reseta o Singleton de Estado
     localStorage.removeItem("sala_project_user");

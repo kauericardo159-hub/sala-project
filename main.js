@@ -8,7 +8,6 @@ import { setupNavigation } from './ui-navigation.js';
 // ==========================================
 // 1. INICIALIZAÇÃO DO WEBSOCKET
 // ==========================================
-// Altere para a URL correta do seu servidor Node de produção se necessário
 export const socket = io("https://sala-project.onrender.com", {
     autoConnect: true,
     reconnection: true,
@@ -29,7 +28,6 @@ class ApplicationState {
         ApplicationState.instance = this;
     }
 
-    // Getters e Setters controlados
     get currentUser() { return this.#currentUser; }
     setCurrentUser(user) { this.#currentUser = user; }
 
@@ -41,7 +39,6 @@ class ApplicationState {
         this.#activeRoom = room;
         const navBtnRoom = document.getElementById("nav-btn-room");
         
-        // Exibe ou esconde o botão de atalho da sala dinamicamente na barra global
         if (navBtnRoom) {
             navBtnRoom.style.display = room ? "flex" : "none";
         }
@@ -56,16 +53,28 @@ export const appState = new ApplicationState();
 window.addEventListener("DOMContentLoaded", () => {
     console.log("[CORE] Inicializando ecossistema Sala Project...");
 
-    // Instancia as escutas de clique da barra de abas e do form de login
     setupNavigation();
     setupAuthInterface();
 
-    // Tenta reautenticação automática via cache local do navegador
-    const cachedUser = localStorage.getItem("sala_project_user");
-    if (cachedUser) {
-        handleAutomaticLogin(cachedUser);
+    const cachedUserStr = localStorage.getItem("sala_project_user");
+    if (cachedUserStr) {
+        try {
+            const parsed = JSON.parse(cachedUserStr);
+            
+            // ADAPTAÇÃO: Se o cache tiver o formato antigo misturado, força um reset para evitar falhas
+            if (!parsed.username || parsed.username.includes('_') || parsed.username.includes('#')) {
+                console.warn("[CORE] Formato de cache antigo detectado. Expulsando resquícios do bug anterior...");
+                localStorage.removeItem("sala_project_user");
+                document.getElementById("auth-screen").style.display = "flex";
+                return;
+            }
+
+            handleAutomaticLogin(cachedUserStr);
+        } catch (e) {
+            localStorage.removeItem("sala_project_user");
+            document.getElementById("auth-screen").style.display = "flex";
+        }
     } else {
-        // Se não houver cache, garante que a tela de login flutuante esteja visível
         const authScreen = document.getElementById("auth-screen");
         if (authScreen) authScreen.style.display = "flex";
     }
@@ -73,15 +82,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // Sincronização Automática em quedas de rede (Auto-reconnect Auth Match)
 socket.on("connect", () => {
-    console.log("[SOCKET] Conectado ao servidor de eventos corporativos.");
+    console.log("[SOCKET] Conectado ao servidor de eventos.");
     
-    // Se o usuário já estava logado e o socket caiu, re-autentica em background silenciosamente
+    // CORREÇÃO CRÍTICA: Processa a reconexão automática usando apenas o username limpo
     if (appState.currentUser && appState.currentUser.password_backup) {
-        let targetUsername = appState.currentUser.username || appState.currentUser.uid;
-        if (typeof targetUsername === 'string' && targetUsername.includes('#')) {
-            targetUsername = targetUsername.split('#')[0];
-        }
+        const targetUsername = String(appState.currentUser.username).toLowerCase().trim();
         
+        console.log("[SOCKET] Reconectando sessão silenciosamente para o usuário estável:", targetUsername);
         socket.emit("submit_login", {
             username: targetUsername,
             password: appState.currentUser.password_backup

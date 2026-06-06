@@ -39,7 +39,6 @@ export function initHome() {
 
     // Configura o escutador de upload de foto (Evita duplicações de cliques)
     if (avatarUploader) {
-        // Correção de boas práticas: recria o listener limpando o anterior clones/atribuições
         const newUploader = avatarUploader.cloneNode(true);
         avatarUploader.parentNode.replaceChild(newUploader, avatarUploader);
         newUploader.addEventListener("change", handleAvatarUpload);
@@ -53,13 +52,13 @@ export function initHome() {
             const newNameText = document.getElementById("input-change-displayname")?.value.trim();
             if (!newNameText) return alert("O Nome de Exibição não pode ficar vazio!");
             
-            console.log("[PROFILE] Solicitando alteração permanente de nome para:", newNameText);
+            console.log("[PROFILE] Solicitando alteração estável de nome para:", newNameText);
             
-            // Dispara para o evento centralizado do servidor
+            // Envia o payload limpo usando o UID numérico rigoroso stringificado
             socket.emit("update_user_profile", {
                 roomId: appState.activeRoom ? appState.activeRoom.id : null,
                 user: {
-                    uid: user.uid,
+                    uid: String(user.uid),
                     name: newNameText,
                     avatar: user.avatarUrl // Mantém a foto que já está salva
                 }
@@ -92,7 +91,7 @@ export function initHome() {
                 }
             }
             
-            alert("Perfil atualizado permanentemente na nuvem!");
+            alert("Perfil atualizado com sucesso!");
         }
     });
 
@@ -125,15 +124,14 @@ function handleAvatarUpload(event) {
     reader.onload = function (e) {
         const base64Data = e.target.result;
         
-        console.log("[PROFILE] Enviando novo avatar em Base64 para persistência...");
+        console.log("[PROFILE] Enviando novo avatar em Base64...");
         
-        // Exibição instantânea preventiva para uma sensação de carregamento veloz
         const imgAvatar = document.getElementById("my-profile-avatar");
         if (imgAvatar) imgAvatar.src = base64Data;
 
-        // Envia para o servidor que agora salva corretamente na coluna 'avatar'
+        // Envia para o servidor usando a chave stringificada estrita
         socket.emit("update_avatar", {
-            uid: appState.currentUser.uid,
+            uid: String(appState.currentUser.uid),
             avatar: base64Data
         });
     };

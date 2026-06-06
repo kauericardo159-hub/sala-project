@@ -80,7 +80,7 @@
             <section id="view-friends" class="app-view">
                 <div class="view-header"><h2>Sistema de Amigos</h2></div>
                 <div class="friend-add-bar">
-                    <input type="text" id="input-friend-id" placeholder="Buscar por @user#0000" autocomplete="off" spellcheck="false">
+                    <input type="text" id="input-friend-id" placeholder="Buscar por username#tag (Ex: kaue#1105)" autocomplete="off" spellcheck="false">
                     <button id="btn-add-friend" class="btn-primary">Enviar Convite</button>
                 </div>
                 <div class="friends-sub-section">
@@ -111,10 +111,12 @@
                 <div class="view-header"><h2>Salas Disponíveis</h2></div>
                 <div class="lobby-action-row">
                     <input type="text" id="room-create-name" placeholder="Nome da Nova Sala" max-length="25">
-                    <select id="room-create-type">
+                    
+                    <select id="room-create-type" onchange="document.getElementById('room-create-password').style.display = this.value === 'private' ? 'block' : 'none';">
                         <option value="public">Pública</option>
                         <option value="private">Privada</option>
                     </select>
+                    
                     <input type="password" id="room-create-password" placeholder="Senha (Se Privada)" style="display: none;">
                     <input type="number" id="room-create-limit" value="8" min="2" max="50" style="max-width: 80px;">
                     <button id="btn-submit-create-room" class="btn-primary">Criar Sala</button>

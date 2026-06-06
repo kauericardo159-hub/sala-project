@@ -28,7 +28,7 @@ app.get('/', (req, res) => {
 async function syncFriends(uid) {
     const list = await Banco.getPopulatedFriendsList(uid);
     const requests = await Banco.getPopulatedRequestsList(uid);
-    const session = Banco.bancoDadosVolatil.sessions[uid];
+    const session = Banco.bancoDadosVolatil.sessions[String(uid)];
     if (session && session.socketId) {
         io.to(session.socketId).emit('friends_sync_data', { friends: list, requests: requests });
     }
@@ -99,19 +99,23 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join_room', async ({ uid, roomId, password }) => {
-        const session = Banco.bancoDadosVolatil.sessions[uid];
+        const session = Banco.bancoDadosVolatil.sessions[String(uid)];
         if (!session) return socket.emit('join_room_response', { success: false, message: "Sessão inválida." });
 
-        const me = await Banco.loginAccount(uid.split('_')[0], ""); 
+        // BLINDAGEM: Não quebra mais por '_' nem gera loginAccount fantasma. Puxa do estado de amigos populado ou usa os dados em cache da RAM.
+        const roomList = Banco.getPublicRoomsList();
         
         const profilePayload = {
-            uid: uid,
-            username: uid.split('_')[0],
-            displayName: me.success ? me.user.displayName : uid,
-            avatarUrl: me.success ? me.user.avatarUrl : "user-photo.jpg",
+            uid: String(uid),
+            username: "user", 
+            displayName: "Usuário",
+            avatarUrl: "user-photo.jpg",
             socketId: socket.id
         };
 
+        // Resgata os dados reais da sessão ativa em RAM para popular o card de voz na hora
+        const list = await Banco.getPopulatedFriendsList(uid).catch(() => []);
+        
         const targetRoom = Banco.findRoomById(roomId);
         if (targetRoom && targetRoom.type === "private" && targetRoom.password !== password) {
             return socket.emit('join_room_response', { success: false, message: "Senha incorreta!" });
@@ -145,7 +149,7 @@ io.on('connection', (socket) => {
     socket.on('toggle_mute_state', ({ roomId, uid, isMuted }) => {
         const room = Banco.findRoomById(roomId);
         if (room) {
-            const u = room.users.find(usr => usr.uid === uid);
+            const u = room.users.find(usr => String(usr.uid) === String(uid));
             if (u) u.isMuted = isMuted;
             io.to(String(roomId)).emit('room_state_broadcast', room);
         }
@@ -155,42 +159,38 @@ io.on('connection', (socket) => {
     // 4. ATUALIZAÇÕES UNIFICADAS DE PERFIL
     // ==========================================
     
-    // Alvo 1: Atualização parcial/completa por formulários (Nome e/ou Foto)
     socket.on('update_user_profile', async ({ roomId, user }) => {
         if (!user || !user.uid) return;
 
         const safeAccount = await Banco.updateAccountProfile(user.uid, user.name, user.avatar);
 
         if (safeAccount) {
-            // Se estiver em uma sala, atualiza e espalha a modificação para o painel de voz
             if (roomId) {
                 const room = Banco.findRoomById(String(roomId));
                 if (room) {
+                    // Sincroniza dinamicamente o card de quem mudou de nome dentro da sala de voz
+                    const uInRoom = room.users.find(u => String(u.uid) === String(user.uid));
+                    if (uInRoom) uInRoom.displayName = user.name;
                     io.to(String(roomId)).emit('room_state_broadcast', room);
                 }
             }
             
-            // Notifica amigos online
-            const me = await Banco.loginAccount(user.uid.split('_')[0], "");
-            if (me.success && me.user.friends) {
-                me.user.friends.forEach(fUid => syncFriends(fUid));
-            }
+            // Notifica amigos online sobre a mudança visual
+            const friends = await Banco.getPopulatedFriendsList(user.uid).catch(() => []);
+            friends.forEach(f => syncFriends(f.uid));
 
             socket.emit('profile_updated_success', safeAccount);
         }
     });
 
-    // Alvo 2: Atalho direto para upload de avatar na aba de perfil
     socket.on('update_avatar', async ({ uid, avatar }) => {
         const safeAccount = await Banco.updateAccountProfile(uid, null, avatar);
         if (safeAccount) {
             socket.emit('profile_updated', { success: true, avatarUrl: avatar });
             socket.emit('profile_updated_success', safeAccount);
             
-            const me = await Banco.loginAccount(uid.split('_')[0], "");
-            if (me.success && me.user.friends) {
-                me.user.friends.forEach(fUid => syncFriends(fUid));
-            }
+            const friends = await Banco.getPopulatedFriendsList(uid).catch(() => []);
+            friends.forEach(f => syncFriends(f.uid));
         }
     });
 
@@ -210,5 +210,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => { 
-    console.log(`[SUCESSO] Servidor Integrado na porta ${PORT}`); 
+    console.log(`[SUCESSO] Servidor Integrado com ID Numérico na porta ${PORT}`); 
 });

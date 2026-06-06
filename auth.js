@@ -86,12 +86,11 @@ function processAuth(btnSubmit) {
     const mode = appState.currentAuthMode;
 
     if (mode === "register") {
-        if (!displayNameInput) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerText = "Criar Nova Conta";
-            return alert("Informe seu Nome de Exibição!");
-        }
-        socket.emit("submit_register", { username: usernameInput, displayName: displayNameInput, password: passwordInput });
+        socket.emit("submit_register", { 
+            username: usernameInput, 
+            displayName: displayNameInput || usernameInput, 
+            password: passwordInput 
+        });
     } else {
         socket.emit("submit_login", { username: usernameInput, password: passwordInput });
     }
@@ -110,7 +109,7 @@ function handleAuthResponse(response) {
     if (response.success) {
         const user = response.user;
         
-        // Atrela a credencial em RAM e salva na persistência local
+        // Atrela a credencial em RAM e salva na persistência local para relogar sozinho depois
         user.password_backup = pendingPassword || (appState.currentUser ? appState.currentUser.password_backup : "");
         pendingPassword = null;
 
@@ -133,22 +132,25 @@ function handleAuthResponse(response) {
     }
 }
 
+// ==========================================
+// 5. LOGIN AUTOMÁTICO VIA CACHE LOCAL
+// ==========================================
 export function handleAutomaticLogin(savedUserStr) {
     try {
         const savedUser = JSON.parse(savedUserStr);
         if (savedUser && savedUser.username && savedUser.password_backup) {
             pendingPassword = savedUser.password_backup;
             
-            let cleanUsername = savedUser.username;
-            if (cleanUsername.includes('#')) {
-                cleanUsername = cleanUsername.split('#')[0];
-            }
+            // ADAPTAÇÃO: O username enviado agora é estritamente o texto puro limpo.
+            const cleanUsername = savedUser.username.toLowerCase().trim();
 
+            console.log("[AUTH] Tentando login automático estável para:", cleanUsername);
             socket.emit("submit_login", { username: cleanUsername, password: savedUser.password_backup });
         } else {
             throw new Error("Formato de cache corrompido.");
         }
     } catch (e) {
+        console.warn("[AUTH] Falha no login automático, limpando cache:", e.message);
         localStorage.removeItem("sala_project_user");
         const authScreen = document.getElementById("auth-screen");
         if (authScreen) authScreen.style.display = "flex";
